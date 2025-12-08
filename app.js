@@ -893,10 +893,17 @@ async function fetchPaste(pasteId, token) {
     });
     
     if (!response.ok) {
+        let errorMsg = 'Failed to fetch paste';
         if (response.status === 404) {
-            throw new Error('Paste not found');
+            errorMsg = 'Paste not found. Check your Paste ID in Settings.';
+        } else if (response.status === 401) {
+            errorMsg = 'Invalid API token. Please check your token in Settings.';
+        } else if (response.status === 429) {
+            errorMsg = 'Rate limit exceeded. Please wait a moment and try again.';
+        } else {
+            errorMsg = `Failed to fetch paste (${response.status}).`;
         }
-        throw new Error(`Failed to fetch paste: ${response.status}`);
+        throw new Error(errorMsg);
     }
     
     return await response.json();
@@ -928,7 +935,17 @@ async function createPaste(token) {
     });
     
     if (!response.ok) {
-        throw new Error(`Failed to create paste: ${response.status}`);
+        let errorMsg = 'Failed to create paste';
+        if (response.status === 401) {
+            errorMsg = 'Invalid API token. Please check your token in Settings.';
+        } else if (response.status === 403) {
+            errorMsg = 'API token lacks permission. Generate a new token at paste.myst.rs (Settings → API Tokens).';
+        } else if (response.status === 429) {
+            errorMsg = 'Rate limit exceeded. Please wait a moment and try again.';
+        } else {
+            errorMsg = `Failed to create paste (${response.status}). Check your API token.`;
+        }
+        throw new Error(errorMsg);
     }
     
     return await response.json();
@@ -957,7 +974,19 @@ async function updatePaste(pasteId, token, pastyId) {
     });
     
     if (!response.ok) {
-        throw new Error(`Failed to update paste: ${response.status}`);
+        let errorMsg = 'Failed to update paste';
+        if (response.status === 401) {
+            errorMsg = 'Invalid API token. Please check your token in Settings.';
+        } else if (response.status === 403) {
+            errorMsg = 'API token lacks permission. Generate a new token at paste.myst.rs (Settings → API Tokens).';
+        } else if (response.status === 404) {
+            errorMsg = 'Paste not found. The Paste ID may be invalid. Try creating a new paste by clearing the Paste ID field.';
+        } else if (response.status === 429) {
+            errorMsg = 'Rate limit exceeded. Please wait a moment and try again.';
+        } else {
+            errorMsg = `Failed to update paste (${response.status}). Check your settings.`;
+        }
+        throw new Error(errorMsg);
     }
     
     return await response.json();
@@ -1014,7 +1043,11 @@ async function syncWithPasteMyst(manualSync = false) {
         }
     } catch (error) {
         console.error('Sync error:', error);
-        showSyncStatus(`Sync failed: ${error.message}`, 'error');
+        let errorMsg = error.message;
+        if (error.message.includes('Failed to fetch')) {
+            errorMsg = 'Network error. Check your internet connection.';
+        }
+        showSyncStatus(errorMsg, 'error');
     } finally {
         state.isSyncing = false;
     }

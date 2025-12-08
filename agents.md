@@ -41,6 +41,8 @@ state = {
         read: []
     },
     currentList: 'wantToRead',
+    sortBy: 'dateAdded',      // Sort field: dateAdded, title, author, year, rating
+    sortOrder: 'desc',         // Sort order: asc, desc
     settings: {
         pasteId: '',
         apiToken: ''
@@ -59,7 +61,9 @@ state = {
     coverUrl: string,     // Google Books thumbnail URL
     isbn: string,         // Optional
     description: string,  // Optional, HTML may be present
-    rating: number        // Optional, 1-10 for books in Read list
+    rating: number,       // Optional, 1-10 for books in Read list
+    tags: string[],       // Optional, user-defined tags
+    addedAt: string       // ISO 8601 timestamp of when book was added to current list
 }
 ```
 
@@ -152,10 +156,16 @@ Body: {
 - Tap icon to add directly to list
 
 ### 2. Book Lists
+- **Sort Controls** (in header):
+  - Dropdown to select sort field: Date Added (default), Title, Author, Year, Rating
+  - Toggle button (↑/↓) to switch between ascending/descending order
+  - Preferences persist in localStorage between sessions
+  - Sort applies to current list view only
 - Books displayed as cards with:
   - Cover image (80x120px)
   - Title, author, year
   - Rating (⭐ X/10) - displayed only for Read list books
+  - Tags (colored badges)
   - Description (truncated to 150 chars)
   - Three list icons (current one highlighted/active)
   - Delete button (far right)
@@ -167,7 +177,11 @@ Body: {
 - Larger cover image (200x300px)
 - Complete description
 - ISBN display if available
-- **Rating input** (1-10) - shown only for books in Read list
+- **Tags management** - shown for books in lists:
+  - Add tags by typing and pressing Enter
+  - Remove tags by clicking × button
+  - Tags displayed as pills with remove button
+- **Rating input** (10 tappable stars) - shown only for books in Read list
 - **From search**: Shows 3 list buttons to add book
 - **From list**: Shows 3 list buttons (current highlighted) + delete button
 - Click outside or X button to close
@@ -185,16 +199,18 @@ Body: {
 
 #### TSV Structure
 ```tsv
-isbn	list	rating
-9780547928227	wantToRead	
-9780451524935	reading	
-9780441013593	read	9
+isbn	list	rating	tags	addedAt
+9780547928227	wantToRead		fantasy,classic	2025-12-08T10:30:00.000Z
+9780451524935	reading		dystopian,scifi	2025-12-07T15:45:00.000Z
+9780441013593	read	9	scifi,epic	2025-12-06T20:15:00.000Z
 ```
-- **Columns**: isbn, list, rating
+- **Columns**: isbn, list, rating, tags, addedAt
 - **Delimiter**: Tab character (\t)
 - **Encoding**: UTF-8
 - **Rating**: Empty for non-Read books, 1-10 for Read books (optional)
-- **Data Model**: TSV stores only essential sync data (ISBN as identifier, list placement, rating). All other book metadata (title, author, cover, description) is fetched from Google Books API and cached locally only.
+- **Tags**: Comma-separated list of tags (optional)
+- **addedAt**: ISO 8601 timestamp of when book was added to current list (updates when moved)
+- **Data Model**: TSV stores only essential sync data (ISBN as identifier, list placement, rating, tags, timestamp). All other book metadata (title, author, cover, description) is fetched from Google Books API and cached locally only.
 
 #### Local Storage (Cache)
 - localStorage key: `bookTrackerData`
@@ -247,7 +263,22 @@ isbn	list	rating
 6. Silent push (no UI status shown)
 7. Note: Only books with ISBN are synced to cloud
 
-### 6. Toast Notifications
+### 6. Sorting
+- **Sort Options**:
+  - Date Added (default): Sorts by addedAt timestamp
+  - Title: Alphabetical by book title
+  - Author: Alphabetical by author name
+  - Year: By publication year
+  - Rating: By star rating (1-10, only shown when viewing Read list)
+- **Sort Order**: Ascending (↑) or Descending (↓), toggle with button
+- **Persistence**: Sort preferences saved to localStorage key `bookTrackerSort`
+- **Implementation**:
+  - `sortBooks(books)`: Compares books based on state.sortBy and state.sortOrder
+  - `renderList()`: Automatically applies sorting before displaying books
+  - Event listeners update state and re-render on sort control changes
+- **UI Location**: Sort controls appear in header of each list view (To Read, Reading, Read)
+
+### 7. Toast Notifications
 - Success messages for:
   - "Book added!"
   - "Book moved!"

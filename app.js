@@ -15,6 +15,8 @@ const state = {
         read: []
     },
     currentList: 'wantToRead',
+    sortBy: 'dateAdded', // dateAdded, title, author, year, rating
+    sortOrder: 'desc', // asc or desc
     settings: {
         pasteId: '',
         apiToken: ''
@@ -32,11 +34,15 @@ const apiTokenInput = document.getElementById('apiToken');
 const saveSettingsBtn = document.getElementById('saveSettings');
 const syncNowBtn = document.getElementById('syncNow');
 const syncStatus = document.getElementById('syncStatus');
+const clearCacheBtn = document.getElementById('clearCache');
+const updatePWABtn = document.getElementById('updatePWA');
+const maintenanceStatus = document.getElementById('maintenanceStatus');
 
 // Initialize app
 function init() {
     loadSettingsFromStorage();
     loadFromLocalStorage();
+    loadSortPreference();
     
     // Render all lists
     renderList('wantToRead');
@@ -104,6 +110,31 @@ function setupEventListeners() {
     // Settings handlers
     saveSettingsBtn.addEventListener('click', saveSettings);
     syncNowBtn.addEventListener('click', () => syncWithPasteMyst(true));
+    
+    // Maintenance handlers
+    clearCacheBtn.addEventListener('click', clearLocalCache);
+    updatePWABtn.addEventListener('click', updatePWA);
+    
+    // Sort handlers
+    const sortBySelect = document.getElementById('sortBy');
+    const sortOrderBtn = document.getElementById('sortOrder');
+    
+    if (sortBySelect) {
+        sortBySelect.addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            saveSortPreference();
+            renderList(state.currentList);
+        });
+    }
+    
+    if (sortOrderBtn) {
+        sortOrderBtn.addEventListener('click', () => {
+            state.sortOrder = state.sortOrder === 'asc' ? 'desc' : 'asc';
+            sortOrderBtn.textContent = state.sortOrder === 'asc' ? '↑' : '↓';
+            saveSortPreference();
+            renderList(state.currentList);
+        });
+    }
 }
 
 // Search books via Google Books API
@@ -145,6 +176,19 @@ async function handleSearch() {
     }
 }
 
+// Helper function to get highest resolution cover image
+function getBestCoverUrl(imageLinks) {
+    if (!imageLinks) return null;
+    // Priority: extraLarge > large > medium > small > thumbnail > smallThumbnail
+    return imageLinks.extraLarge || 
+           imageLinks.large || 
+           imageLinks.medium || 
+           imageLinks.small || 
+           imageLinks.thumbnail || 
+           imageLinks.smallThumbnail || 
+           null;
+}
+
 // Display search results
 function displaySearchResults(books) {
     searchResults.innerHTML = '';
@@ -156,9 +200,11 @@ function displaySearchResults(books) {
             title: book.title,
             author: book.authors ? book.authors.join(', ') : 'Unknown Author',
             year: book.publishedDate ? book.publishedDate.substring(0, 4) : 'N/A',
-            coverUrl: book.imageLinks ? book.imageLinks.thumbnail : null,
+            coverUrl: getBestCoverUrl(book.imageLinks),
             isbn: book.industryIdentifiers ? book.industryIdentifiers[0]?.identifier : null,
-            description: book.description || null
+            description: book.description || null,
+            tags: [],
+            addedAt: new Date().toISOString()
         };
 
         const resultItem = createSearchResultItem(bookData);
@@ -293,6 +339,8 @@ function moveBook(bookId, fromList, toList) {
     const book = state.books[fromList].find(b => b.id === bookId);
     if (book) {
         state.books[fromList] = state.books[fromList].filter(b => b.id !== bookId);
+        // Update timestamp when moving to new list
+        book.addedAt = new Date().toISOString();
         state.books[toList].push(book);
         saveToLocalStorage();
         renderList(fromList);
@@ -308,6 +356,35 @@ function updateBookRating(bookId, rating) {
         book.rating = rating;
         saveToLocalStorage();
         renderList('read');
+    }
+}
+
+// Add tag to book
+function addTagToBook(bookId, tag) {
+    for (const list of Object.values(state.books)) {
+        const book = list.find(b => b.id === bookId);
+        if (book) {
+            if (!book.tags) book.tags = [];
+            if (!book.tags.includes(tag)) {
+                book.tags.push(tag);
+                saveToLocalStorage();
+                renderList(state.currentList);
+            }
+            break;
+        }
+    }
+}
+
+// Remove tag from book
+function removeTagFromBook(bookId, tag) {
+    for (const list of Object.values(state.books)) {
+        const book = list.find(b => b.id === bookId);
+        if (book && book.tags) {
+            book.tags = book.tags.filter(t => t !== tag);
+            saveToLocalStorage();
+            renderList(state.currentList);
+            break;
+        }
     }
 }
 
@@ -349,6 +426,45 @@ function switchList(listName) {
     switchView(viewMap[listName]);
 }
 
+// Sort books based on current sort settings
+function sortBooks(books) {
+    const sorted = [...books];
+    
+    sorted.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(state.sortBy) {
+            case 'title':
+                aVal = a.title.toLowerCase();
+                bVal = b.title.toLowerCase();
+                break;
+            case 'author':
+                aVal = a.author.toLowerCase();
+                bVal = b.author.toLowerCase();
+                break;
+            case 'year':
+                aVal = a.year === 'N/A' ? '0' : a.year;
+                bVal = b.year === 'N/A' ? '0' : b.year;
+                break;
+            case 'rating':
+                aVal = a.rating || 0;
+                bVal = b.rating || 0;
+                break;
+            case 'dateAdded':
+            default:
+                aVal = a.addedAt || '';
+                bVal = b.addedAt || '';
+                break;
+        }
+        
+        if (aVal < bVal) return state.sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return state.sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    return sorted;
+}
+
 // Render specific list
 function renderList(listName) {
     const listElement = document.getElementById(listName);
@@ -363,7 +479,10 @@ function renderList(listName) {
     listElement.classList.remove('empty');
     listElement.innerHTML = '';
 
-    books.forEach(book => {
+    // Sort books before rendering
+    const sortedBooks = sortBooks(books);
+    
+    sortedBooks.forEach(book => {
         const bookCard = createBookCard(book);
         listElement.appendChild(bookCard);
     });
@@ -390,6 +509,11 @@ function createBookCard(book) {
     const ratingDisplay = (state.currentList === 'read' && book.rating) 
         ? `<div class="book-rating">⭐ ${book.rating}/10</div>` 
         : '';
+    
+    // Show tags
+    const tags = book.tags && book.tags.length > 0 
+        ? `<div class="book-tags">${book.tags.map(tag => `<span class="tag-badge">${tag}</span>`).join('')}</div>` 
+        : '';
 
     div.innerHTML = `
         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'120\' fill=\'%232c2c2e\'%3E%3Crect width=\'80\' height=\'120\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'32\'%3E📖%3C/text%3E%3C/svg%3E'">
@@ -399,6 +523,7 @@ function createBookCard(book) {
                 <div class="book-author">${book.author}</div>
                 <div class="book-year">${book.year}</div>
                 ${ratingDisplay}
+                ${tags}
                 ${description}
             </div>
             <div class="book-card-actions">
@@ -455,20 +580,41 @@ function showBookDetail(book, source = 'list') {
     const content = document.getElementById('bookDetailContent');
 
     const coverUrl = book.coverUrl 
-        ? book.coverUrl.replace('http://', 'https://').replace('zoom=1', 'zoom=2')
+        ? book.coverUrl.replace('http://', 'https://')
         : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" fill="%232c2c2e"%3E%3Crect width="200" height="300"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="64"%3E📖%3C/text%3E%3C/svg%3E';
 
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
 
+    // Show tags section for books in lists
+    let tagsSection = '';
+    if (source === 'list') {
+        const tags = book.tags || [];
+        const tagPills = tags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
+        tagsSection = `
+            <div class="detail-tags">
+                <label>Tags:</label>
+                <div class="tags-container">
+                    ${tagPills}
+                    <input type="text" class="tag-input" placeholder="Add tag..." data-book-id="${book.id}">
+                </div>
+            </div>
+        `;
+    }
+
     // Show rating input for books in Read list
     let ratingSection = '';
     if (source === 'list' && state.currentList === 'read') {
-        const currentRating = book.rating || '';
+        const currentRating = book.rating || 0;
+        let stars = '';
+        for (let i = 1; i <= 10; i++) {
+            const filled = i <= currentRating ? 'filled' : '';
+            stars += `<span class="star ${filled}" data-rating="${i}">★</span>`;
+        }
         ratingSection = `
             <div class="detail-rating">
-                <label for="bookRating">Rating (1-10):</label>
-                <input type="number" id="bookRating" min="1" max="10" value="${currentRating}" placeholder="Rate this book" data-book-id="${book.id}">
+                <label>Rating:</label>
+                <div class="star-rating" data-book-id="${book.id}">${stars}</div>
             </div>
         `;
     }
@@ -540,6 +686,7 @@ function showBookDetail(book, source = 'list') {
             <div class="detail-author">${book.author}</div>
             <div class="detail-year">${book.year}</div>
             ${isbn}
+            ${tagsSection}
             ${ratingSection}
             ${listActions}
             <div class="detail-description">${description}</div>
@@ -569,16 +716,51 @@ function showBookDetail(book, source = 'list') {
         });
     });
 
-    // Add event listener for rating input
-    const ratingInput = content.querySelector('#bookRating');
-    if (ratingInput) {
-        ratingInput.addEventListener('change', (e) => {
-            const rating = parseInt(e.target.value);
-            if (rating >= 1 && rating <= 10) {
+    // Add event listener for star rating
+    const starRating = content.querySelector('.star-rating');
+    if (starRating) {
+        starRating.querySelectorAll('.star').forEach(star => {
+            star.addEventListener('click', (e) => {
+                const rating = parseInt(e.target.dataset.rating);
                 updateBookRating(book.id, rating);
-            } else if (e.target.value === '') {
-                updateBookRating(book.id, null);
+                
+                // Update star display
+                starRating.querySelectorAll('.star').forEach(s => {
+                    const starValue = parseInt(s.dataset.rating);
+                    if (starValue <= rating) {
+                        s.classList.add('filled');
+                    } else {
+                        s.classList.remove('filled');
+                    }
+                });
+            });
+        });
+    }
+
+    // Add event listeners for tags
+    const tagInput = content.querySelector('.tag-input');
+    if (tagInput) {
+        tagInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                const tag = e.target.value.trim();
+                addTagToBook(book.id, tag);
+                e.target.value = '';
+                
+                // Re-render the book detail to show new tag
+                setTimeout(() => showBookDetail(book, source), 100);
             }
+        });
+        
+        // Remove tag event listeners
+        content.querySelectorAll('.tag-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tag = btn.dataset.tag;
+                removeTagFromBook(book.id, tag);
+                
+                // Re-render the book detail
+                setTimeout(() => showBookDetail(book, source), 100);
+            });
         });
     }
 
@@ -595,18 +777,21 @@ function closeBookDetail() {
 
 // ===== PASTEMYST SYNC FUNCTIONS =====
 
-// Convert books to TSV format (minimal: isbn, list, rating)
+// Convert books to TSV format (minimal: isbn, list, rating, tags, addedAt)
 function booksToTSV() {
-    const lines = ['isbn\tlist\trating'];
+    const lines = ['isbn\tlist\trating\ttags\taddedAt'];
     
     for (const [listName, books] of Object.entries(state.books)) {
         books.forEach(book => {
             // Only sync books that have ISBN
             if (book.isbn) {
+                const tags = book.tags && book.tags.length > 0 ? book.tags.join(',') : '';
                 const row = [
                     book.isbn,
                     listName,
-                    book.rating || ''
+                    book.rating || '',
+                    tags,
+                    book.addedAt || ''
                 ];
                 lines.push(row.join('\t'));
             }
@@ -634,7 +819,8 @@ async function tsvToBooks(tsv) {
         const cols = lines[i].split('\t');
         if (cols.length < 2) continue;
         
-        const [isbn, listName, rating] = cols;
+        const [isbn, listName, rating, tagsStr, addedAt] = cols;
+        const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
         
         // Check if we already have this book in local cache
         let cachedBook = null;
@@ -647,7 +833,9 @@ async function tsvToBooks(tsv) {
             // Use cached data
             const book = {
                 ...cachedBook,
-                rating: rating ? parseInt(rating) : null
+                rating: rating ? parseInt(rating) : null,
+                tags: tags,
+                addedAt: addedAt || null
             };
             if (books[listName]) {
                 books[listName].push(book);
@@ -667,10 +855,12 @@ async function tsvToBooks(tsv) {
                                 title: volumeInfo.title || 'Unknown Title',
                                 author: volumeInfo.authors?.join(', ') || 'Unknown Author',
                                 year: volumeInfo.publishedDate?.substring(0, 4) || 'N/A',
-                                coverUrl: volumeInfo.imageLinks?.thumbnail || null,
+                                coverUrl: getBestCoverUrl(volumeInfo.imageLinks),
                                 isbn: isbn,
                                 description: volumeInfo.description || null,
-                                rating: rating ? parseInt(rating) : null
+                                rating: rating ? parseInt(rating) : null,
+                                tags: tags,
+                                addedAt: addedAt || null
                             };
                             
                             if (books[listName]) {
@@ -892,6 +1082,34 @@ function saveSettingsToStorage() {
     localStorage.setItem('bookTrackerSettings', JSON.stringify(state.settings));
 }
 
+// Save sort preference
+function saveSortPreference() {
+    localStorage.setItem('bookTrackerSort', JSON.stringify({
+        sortBy: state.sortBy,
+        sortOrder: state.sortOrder
+    }));
+}
+
+// Load sort preference
+function loadSortPreference() {
+    const saved = localStorage.getItem('bookTrackerSort');
+    if (saved) {
+        try {
+            const sortPref = JSON.parse(saved);
+            state.sortBy = sortPref.sortBy || 'dateAdded';
+            state.sortOrder = sortPref.sortOrder || 'desc';
+            
+            // Update UI
+            const sortBySelect = document.getElementById('sortBy');
+            const sortOrderBtn = document.getElementById('sortOrder');
+            if (sortBySelect) sortBySelect.value = state.sortBy;
+            if (sortOrderBtn) sortOrderBtn.textContent = state.sortOrder === 'asc' ? '↑' : '↓';
+        } catch (error) {
+            console.error('Error loading sort preference:', error);
+        }
+    }
+}
+
 // ===== LOCAL STORAGE FUNCTIONS =====
 
 // Local storage functions
@@ -909,6 +1127,69 @@ function loadFromLocalStorage() {
         } catch (error) {
             console.error('Error loading data:', error);
         }
+    }
+}
+
+// ===== MAINTENANCE FUNCTIONS =====
+
+// Clear local cache
+function clearLocalCache() {
+    if (confirm('Are you sure you want to clear the local cache? This will remove all books from this device. Books synced to cloud will be restored on next sync.')) {
+        localStorage.removeItem('bookTrackerData');
+        state.books = {
+            wantToRead: [],
+            reading: [],
+            read: []
+        };
+        renderList('wantToRead');
+        renderList('reading');
+        renderList('read');
+        showMaintenanceStatus('Local cache cleared. Sync to restore from cloud.', 'success');
+    }
+}
+
+// Update PWA
+function updatePWA() {
+    if ('serviceWorker' in navigator) {
+        showMaintenanceStatus('Checking for updates...', 'info');
+        
+        navigator.serviceWorker.getRegistration().then(registration => {
+            if (registration) {
+                registration.update().then(() => {
+                    // Check if there's a waiting service worker
+                    if (registration.waiting) {
+                        // Tell the waiting service worker to skip waiting
+                        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        showMaintenanceStatus('Update available! Reloading app...', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showMaintenanceStatus('App is up to date!', 'success');
+                    }
+                });
+            } else {
+                showMaintenanceStatus('No service worker registered.', 'error');
+            }
+        }).catch(err => {
+            console.error('Update check failed:', err);
+            showMaintenanceStatus('Failed to check for updates.', 'error');
+        });
+    } else {
+        showMaintenanceStatus('Service workers not supported.', 'error');
+    }
+}
+
+// Show maintenance status message
+function showMaintenanceStatus(message, type = 'info') {
+    maintenanceStatus.textContent = message;
+    maintenanceStatus.className = `sync-status sync-${type}`;
+    maintenanceStatus.style.display = 'block';
+    
+    if (type === 'success' || type === 'error') {
+        setTimeout(() => {
+            maintenanceStatus.style.display = 'none';
+        }, 3000);
     }
 }
 

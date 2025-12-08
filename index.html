@@ -30,6 +30,15 @@
         <div class="view" id="wantToReadView">
             <header class="header">
                 <h1>To Read</h1>
+                <div class="sort-controls">
+                    <select id="sortBy" class="sort-select">
+                        <option value="dateAdded">Date Added</option>
+                        <option value="title">Title</option>
+                        <option value="author">Author</option>
+                        <option value="year">Year</option>
+                    </select>
+                    <button id="sortOrder" class="btn-sort" title="Toggle sort order">↓</button>
+                </div>
             </header>
             <main class="content">
                 <div class="book-list" id="wantToRead"></div>
@@ -40,6 +49,15 @@
         <div class="view" id="readingView">
             <header class="header">
                 <h1>Reading</h1>
+                <div class="sort-controls">
+                    <select class="sort-select" disabled>
+                        <option value="dateAdded">Date Added</option>
+                        <option value="title">Title</option>
+                        <option value="author">Author</option>
+                        <option value="year">Year</option>
+                    </select>
+                    <button class="btn-sort" disabled title="Toggle sort order">↓</button>
+                </div>
             </header>
             <main class="content">
                 <div class="book-list" id="reading"></div>
@@ -50,6 +68,16 @@
         <div class="view" id="readView">
             <header class="header">
                 <h1>Read</h1>
+                <div class="sort-controls">
+                    <select class="sort-select" disabled>
+                        <option value="dateAdded">Date Added</option>
+                        <option value="title">Title</option>
+                        <option value="author">Author</option>
+                        <option value="year">Year</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                    <button class="btn-sort" disabled title="Toggle sort order">↓</button>
+                </div>
             </header>
             <main class="content">
                 <div class="book-list" id="read"></div>
@@ -82,6 +110,16 @@
                     <button id="syncNow" class="btn">Sync Now</button>
                     
                     <div id="syncStatus" class="sync-status"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>App Maintenance</h2>
+                    <p class="settings-description">Manage local cache and update the app.</p>
+                    
+                    <button id="clearCache" class="btn">Clear Local Cache</button>
+                    <button id="updatePWA" class="btn btn-primary">Update App</button>
+                    
+                    <div id="maintenanceStatus" class="sync-status"></div>
                 </div>
             </main>
         </div>

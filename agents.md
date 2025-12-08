@@ -30,6 +30,7 @@ book-tracker/
 - **To Read View**: Books to be read
 - **Reading View**: Currently reading
 - **Read View**: Completed books
+- **Settings View**: Configure PasteMyst sync
 
 #### 2. State Management
 ```javascript
@@ -39,7 +40,12 @@ state = {
         reading: [],
         read: []
     },
-    currentList: 'wantToRead'
+    currentList: 'wantToRead',
+    settings: {
+        pasteId: '',
+        apiToken: ''
+    },
+    isSyncing: false
 }
 ```
 
@@ -52,11 +58,62 @@ state = {
     year: string,         // YYYY format
     coverUrl: string,     // Google Books thumbnail URL
     isbn: string,         // Optional
-    description: string   // Optional, HTML may be present
+    description: string,  // Optional, HTML may be present
+    rating: number        // Optional, 1-10 for books in Read list
 }
 ```
 
 ## API Integration
+
+### PasteMyst API
+
+#### Authentication
+```javascript
+headers: {
+    'Authorization': `Bearer ${apiToken}`,
+    'Content-Type': 'application/json'
+}
+```
+
+#### Endpoints
+
+**Fetch Paste**
+```
+GET https://paste.myst.rs/api/v2/paste/{pasteId}
+```
+Returns paste object with pasties array containing content.
+
+**Create Paste**
+```
+POST https://paste.myst.rs/api/v2/paste
+Body: {
+    "title": "Book Tracker Data",
+    "pasties": [{
+        "title": "books.tsv",
+        "language": "plain text",
+        "code": "{tsv content}"
+    }]
+}
+```
+Returns paste object with new pasteId.
+
+**Update Paste**
+```
+PATCH https://paste.myst.rs/api/v2/paste/{pasteId}
+Body: {
+    "pasties": [{
+        "title": "books.tsv",
+        "language": "plain text",
+        "code": "{tsv content}"
+    }]
+}
+```
+
+#### Error Handling
+- 404: Paste not found (invalid ID)
+- 401: Unauthorized (invalid token)
+- 429: Rate limit exceeded (5 req/sec)
+- Network errors: Show error status
 
 ### Google Books API
 - **Endpoint**: `https://www.googleapis.com/books/v1/volumes`
@@ -98,6 +155,7 @@ state = {
 - Books displayed as cards with:
   - Cover image (80x120px)
   - Title, author, year
+  - Rating (⭐ X/10) - displayed only for Read list books
   - Description (truncated to 150 chars)
   - Three list icons (current one highlighted/active)
   - Delete button (far right)
@@ -109,17 +167,87 @@ state = {
 - Larger cover image (200x300px)
 - Complete description
 - ISBN display if available
+- **Rating input** (1-10) - shown only for books in Read list
 - **From search**: Shows 3 list buttons to add book
 - **From list**: Shows 3 list buttons (current highlighted) + delete button
 - Click outside or X button to close
 
 ### 4. Data Persistence
+
+#### Cloud Sync (Primary Storage)
+- **Service**: PasteMyst (https://paste.myst.rs)
+- **Format**: TSV (Tab-Separated Values) - minimal schema
+- **Source of Truth**: PasteMyst paste stores ISBN, list placement, and ratings only
+- **Authentication**: Bearer token via API key
+- **Endpoint**: https://paste.myst.rs/api/v2
+- **Rate Limit**: 5 requests/second
+- **Sync Strategy**: Cloud stores essential data only (isbn, list, rating). Full book metadata is fetched from Google Books API on sync and cached locally.
+
+#### TSV Structure
+```tsv
+isbn	list	rating
+9780547928227	wantToRead	
+9780451524935	reading	
+9780441013593	read	9
+```
+- **Columns**: isbn, list, rating
+- **Delimiter**: Tab character (\t)
+- **Encoding**: UTF-8
+- **Rating**: Empty for non-Read books, 1-10 for Read books (optional)
+- **Data Model**: TSV stores only essential sync data (ISBN as identifier, list placement, rating). All other book metadata (title, author, cover, description) is fetched from Google Books API and cached locally only.
+
+#### Local Storage (Cache)
 - localStorage key: `bookTrackerData`
 - Saves entire state.books object as JSON
 - Loaded on app initialization
 - Auto-saves on any book operation
+- Syncs to PasteMyst automatically after each save
 
-### 5. Toast Notifications
+#### Settings Storage
+- localStorage key: `bookTrackerSettings`
+- Stores: pasteId, apiToken
+- Persists between sessions
+
+### 5. Cloud Sync Flow
+
+#### Initial Setup (Settings View)
+1. User enters PasteMyst API token
+2. User enters existing Paste ID (or leaves empty for new)
+3. Click "Save Settings" → `saveSettings()`
+4. If Paste ID empty: `createPaste()` → new paste created
+5. Settings saved to localStorage
+6. Returns to list view
+
+#### Auto-Sync on Startup
+1. App loads → `init()`
+2. Loads settings from localStorage
+3. If token + pasteId exist: `syncWithPasteMyst(false)`
+4. Fetches paste → `fetchPaste(pasteId)`
+5. Parses TSV → `tsvToBooks(tsvContent)`
+6. For each ISBN in TSV:
+   - Check local cache first
+   - If not cached, fetch book data from Google Books API
+7. Builds complete book objects with cloud ratings
+8. Updates state (cloud takes precedence)
+9. Updates UI
+
+#### Manual Sync
+1. User clicks "Sync Now" button
+2. `syncWithPasteMyst(true)` with showStatus=true
+3. Shows "Syncing..." status message
+4. Fetches paste, parses, updates state
+5. Shows success/error status message
+
+#### Push on Change
+1. Any book operation (add/move/delete/rate)
+2. `saveToLocalStorage()` called (caches full book data locally)
+3. Automatically calls `pushToPasteMyst()`
+4. Converts books to minimal TSV → `booksToTSV()` (only isbn, list, rating)
+5. Updates paste → `updatePaste(pasteId, tsvContent)`
+6. Silent push (no UI status shown)
+7. Note: Only books with ISBN are synced to cloud
+
+### 6. Toast Notifications
 - Success messages for:
   - "Book added!"
   - "Book moved!"
@@ -243,41 +371,68 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 ## Future Enhancement Considerations
 
 ### Potential Features
-- Book notes/ratings
+- Book notes (add to TSV columns)
 - Reading progress percentage
 - Reading statistics/analytics
-- Export/import data
-- Multiple reading lists
+- Export/import TSV files
+- Multiple reading lists (expand TSV list column values)
 - Search filters (year, genre, language)
 - Sort options (title, author, date added)
 - Dark/light theme toggle
-- Authentication + cloud sync
+- Conflict resolution UI for sync conflicts
+- Offline queue for sync operations
+- Sync history/audit log
 
 ### API Alternatives
 - Open Library API (original, less reliable)
 - ISBN DB API (ISBN-focused)
 - Custom backend proxy (for Goodreads scraping)
 
+### Storage Alternatives
+- GitHub Gist (similar to PasteMyst, requires GitHub auth)
+- Pastebin.com (less developer-friendly API)
+- JSONBin.io (JSON-focused, rate limits)
+- Firebase Realtime Database (requires account)
+- Cloudflare Workers KV (requires account)
+
 ### Performance
 - Virtual scrolling for large lists
 - Image lazy loading
 - Search result pagination
-- IndexedDB instead of localStorage
+- IndexedDB instead of localStorage for local cache
+- Debounced sync pushes (batch updates)
+- Optimistic UI updates before sync completes
+- Delta sync (only send changed books)
+- Compression for large TSV files
 
 ## Troubleshooting
 
 ### Common Issues
 1. **Search not working**: Check Google Books API quota
 2. **Books not persisting**: Check localStorage availability/quota
-3. **Service Worker not updating**: Increment cache version
-4. **Icons not showing**: SVG must be inline in HTML/JS
-5. **Modal won't close**: Check event propagation on buttons
+3. **Sync not working**: 
+   - Verify API token is valid (generate at paste.myst.rs)
+   - Check paste ID format (alphanumeric string)
+   - Verify rate limits not exceeded (5 req/sec)
+   - Check network connectivity
+4. **Service Worker not updating**: Increment cache version
+5. **Icons not showing**: SVG must be inline in HTML/JS
+6. **Modal won't close**: Check event propagation on buttons
+7. **Duplicate books after sync**: Cloud sync overrides local data
+8. **Book not syncing to cloud**: Book must have ISBN to sync (warning shown on add)
+9. **Missing book data after sync**: Ensure Google Books API is accessible to fetch metadata
 
 ### Debug Tips
 - Check console for errors
 - Inspect localStorage: `localStorage.getItem('bookTrackerData')`
-- Test API directly: Open endpoint URL in browser
+- Inspect settings: `localStorage.getItem('bookTrackerSettings')`
+- Test Google Books API: Open endpoint URL in browser
+- Test PasteMyst API: 
+  - GET https://paste.myst.rs/api/v2/paste/{pasteId}
+  - Check response in browser DevTools
+- View paste content: https://paste.myst.rs/{pasteId}
 - Clear cache: Unregister service worker in DevTools
+- Force sync: Click "Sync Now" in Settings and watch console
 
 ## Code Style Guidelines
 

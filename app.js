@@ -14,7 +14,12 @@ const state = {
         reading: [],
         read: []
     },
-    currentList: 'wantToRead'
+    currentList: 'wantToRead',
+    settings: {
+        pasteId: '',
+        apiToken: ''
+    },
+    isSyncing: false
 };
 
 // DOM elements
@@ -22,9 +27,15 @@ const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
 const navItems = document.querySelectorAll('.nav-item');
 const views = document.querySelectorAll('.view');
+const pasteIdInput = document.getElementById('pasteId');
+const apiTokenInput = document.getElementById('apiToken');
+const saveSettingsBtn = document.getElementById('saveSettings');
+const syncNowBtn = document.getElementById('syncNow');
+const syncStatus = document.getElementById('syncStatus');
 
 // Initialize app
 function init() {
+    loadSettingsFromStorage();
     loadFromLocalStorage();
     
     // Render all lists
@@ -36,6 +47,11 @@ function init() {
     switchView('searchView');
     
     setupEventListeners();
+    
+    // Auto-sync on startup if configured
+    if (state.settings.apiToken && state.settings.pasteId) {
+        syncWithPasteMyst(false);
+    }
 }
 
 // Event listeners
@@ -84,6 +100,10 @@ function setupEventListeners() {
             closeBookDetail();
         }
     });
+
+    // Settings handlers
+    saveSettingsBtn.addEventListener('click', saveSettings);
+    syncNowBtn.addEventListener('click', () => syncWithPasteMyst(true));
 }
 
 // Search books via Google Books API
@@ -206,6 +226,12 @@ function createSearchResultItem(book) {
 
 // Add book to list
 function addBookToList(book, listName) {
+    // Check if book has ISBN (required for cloud sync)
+    if (!book.isbn) {
+        showToast('⚠️ Book has no ISBN - won\'t sync to cloud');
+        // Still add to local list, but warn user
+    }
+    
     // Check if book already exists in any list
     const allBooks = [...state.books.wantToRead, ...state.books.reading, ...state.books.read];
     if (allBooks.some(b => b.id === book.id)) {
@@ -221,7 +247,9 @@ function addBookToList(book, listName) {
     // Clear search and show success
     searchResults.innerHTML = '';
     searchInput.value = '';
-    showToast('Book added!');
+    if (book.isbn) {
+        showToast('Book added!');
+    }
 }
 
 // Simple toast notification
@@ -270,6 +298,16 @@ function moveBook(bookId, fromList, toList) {
         renderList(fromList);
         renderList(toList);
         showToast('Book moved!');
+    }
+}
+
+// Update book rating
+function updateBookRating(bookId, rating) {
+    const book = state.books.read.find(b => b.id === bookId);
+    if (book) {
+        book.rating = rating;
+        saveToLocalStorage();
+        renderList('read');
     }
 }
 
@@ -347,6 +385,11 @@ function createBookCard(book) {
         : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="120" fill="%232c2c2e"%3E%3Crect width="80" height="120"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="32"%3E📖%3C/text%3E%3C/svg%3E';
 
     const description = book.description ? `<div class="book-description">${book.description.length > 150 ? book.description.substring(0, 150) + '...' : book.description}</div>` : '';
+    
+    // Show rating for books in Read list
+    const ratingDisplay = (state.currentList === 'read' && book.rating) 
+        ? `<div class="book-rating">⭐ ${book.rating}/10</div>` 
+        : '';
 
     div.innerHTML = `
         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'120\' fill=\'%232c2c2e\'%3E%3Crect width=\'80\' height=\'120\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'32\'%3E📖%3C/text%3E%3C/svg%3E'">
@@ -355,6 +398,7 @@ function createBookCard(book) {
                 <div class="book-title">${book.title}</div>
                 <div class="book-author">${book.author}</div>
                 <div class="book-year">${book.year}</div>
+                ${ratingDisplay}
                 ${description}
             </div>
             <div class="book-card-actions">
@@ -416,6 +460,18 @@ function showBookDetail(book, source = 'list') {
 
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
+
+    // Show rating input for books in Read list
+    let ratingSection = '';
+    if (source === 'list' && state.currentList === 'read') {
+        const currentRating = book.rating || '';
+        ratingSection = `
+            <div class="detail-rating">
+                <label for="bookRating">Rating (1-10):</label>
+                <input type="number" id="bookRating" min="1" max="10" value="${currentRating}" placeholder="Rate this book" data-book-id="${book.id}">
+            </div>
+        `;
+    }
 
     // Show list action buttons
     let listActions = '';
@@ -484,6 +540,7 @@ function showBookDetail(book, source = 'list') {
             <div class="detail-author">${book.author}</div>
             <div class="detail-year">${book.year}</div>
             ${isbn}
+            ${ratingSection}
             ${listActions}
             <div class="detail-description">${description}</div>
         </div>
@@ -512,6 +569,19 @@ function showBookDetail(book, source = 'list') {
         });
     });
 
+    // Add event listener for rating input
+    const ratingInput = content.querySelector('#bookRating');
+    if (ratingInput) {
+        ratingInput.addEventListener('change', (e) => {
+            const rating = parseInt(e.target.value);
+            if (rating >= 1 && rating <= 10) {
+                updateBookRating(book.id, rating);
+            } else if (e.target.value === '') {
+                updateBookRating(book.id, null);
+            }
+        });
+    }
+
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
@@ -523,9 +593,312 @@ function closeBookDetail() {
     document.body.style.overflow = '';
 }
 
+// ===== PASTEMYST SYNC FUNCTIONS =====
+
+// Convert books to TSV format (minimal: isbn, list, rating)
+function booksToTSV() {
+    const lines = ['isbn\tlist\trating'];
+    
+    for (const [listName, books] of Object.entries(state.books)) {
+        books.forEach(book => {
+            // Only sync books that have ISBN
+            if (book.isbn) {
+                const row = [
+                    book.isbn,
+                    listName,
+                    book.rating || ''
+                ];
+                lines.push(row.join('\t'));
+            }
+        });
+    }
+    
+    return lines.join('\n');
+}
+
+// Parse TSV to books (fetch full data from Google Books API using ISBN)
+async function tsvToBooks(tsv) {
+    const lines = tsv.trim().split('\n');
+    if (lines.length < 1) return { wantToRead: [], reading: [], read: [] };
+    
+    const books = {
+        wantToRead: [],
+        reading: [],
+        read: []
+    };
+    
+    // Skip header line and fetch book data from Google Books API
+    const fetchPromises = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split('\t');
+        if (cols.length < 2) continue;
+        
+        const [isbn, listName, rating] = cols;
+        
+        // Check if we already have this book in local cache
+        let cachedBook = null;
+        for (const list of Object.values(state.books)) {
+            cachedBook = list.find(b => b.isbn === isbn);
+            if (cachedBook) break;
+        }
+        
+        if (cachedBook) {
+            // Use cached data
+            const book = {
+                ...cachedBook,
+                rating: rating ? parseInt(rating) : null
+            };
+            if (books[listName]) {
+                books[listName].push(book);
+            }
+        } else {
+            // Fetch from Google Books API
+            fetchPromises.push(
+                fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.items && data.items.length > 0) {
+                            const item = data.items[0];
+                            const volumeInfo = item.volumeInfo;
+                            
+                            const book = {
+                                id: item.id,
+                                title: volumeInfo.title || 'Unknown Title',
+                                author: volumeInfo.authors?.join(', ') || 'Unknown Author',
+                                year: volumeInfo.publishedDate?.substring(0, 4) || 'N/A',
+                                coverUrl: volumeInfo.imageLinks?.thumbnail || null,
+                                isbn: isbn,
+                                description: volumeInfo.description || null,
+                                rating: rating ? parseInt(rating) : null
+                            };
+                            
+                            if (books[listName]) {
+                                books[listName].push(book);
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error(`Failed to fetch book with ISBN ${isbn}:`, err);
+                    })
+            );
+        }
+    }
+    
+    // Wait for all API calls to complete
+    await Promise.all(fetchPromises);
+    
+    return books;
+}
+
+// Fetch paste from PasteMyst
+async function fetchPaste(pasteId, token) {
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`https://paste.myst.rs/api/v2/paste/${pasteId}`, {
+        headers
+    });
+    
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error('Paste not found');
+        }
+        throw new Error(`Failed to fetch paste: ${response.status}`);
+    }
+    
+    return await response.json();
+}
+
+// Create new paste on PasteMyst
+async function createPaste(token) {
+    const tsv = booksToTSV();
+    
+    const response = await fetch('https://paste.myst.rs/api/v2/paste', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            title: 'Book Tracker Database',
+            expiresIn: 'never',
+            isPrivate: true,
+            pasties: [
+                {
+                    _id: '',
+                    title: 'books.tsv',
+                    language: 'plain text',
+                    code: tsv
+                }
+            ]
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Failed to create paste: ${response.status}`);
+    }
+    
+    return await response.json();
+}
+
+// Update existing paste on PasteMyst
+async function updatePaste(pasteId, token, pastyId) {
+    const tsv = booksToTSV();
+    
+    const response = await fetch(`https://paste.myst.rs/api/v2/paste/${pasteId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            pasties: [
+                {
+                    _id: pastyId,
+                    title: 'books.tsv',
+                    language: 'plain text',
+                    code: tsv
+                }
+            ]
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Failed to update paste: ${response.status}`);
+    }
+    
+    return await response.json();
+}
+
+// Main sync function
+async function syncWithPasteMyst(manualSync = false) {
+    if (state.isSyncing) return;
+    
+    const token = state.settings.apiToken.trim();
+    const pasteId = state.settings.pasteId.trim();
+    
+    if (!token) {
+        if (manualSync) {
+            showSyncStatus('Please configure API token in settings', 'error');
+        }
+        return;
+    }
+    
+    state.isSyncing = true;
+    if (manualSync) showSyncStatus('Syncing...', 'info');
+    
+    try {
+        if (!pasteId) {
+            // Create new paste
+            const paste = await createPaste(token);
+            state.settings.pasteId = paste._id;
+            pasteIdInput.value = paste._id;
+            saveSettingsToStorage();
+            showSyncStatus(`Synced! New paste created: ${paste._id}`, 'success');
+        } else {
+            // Fetch existing paste and sync
+            const paste = await fetchPaste(pasteId, token);
+            
+            if (paste.pasties && paste.pasties.length > 0) {
+                const tsv = paste.pasties[0].code;
+                const remoteBooks = await tsvToBooks(tsv);
+                
+                // Remote is source of truth - overwrite local
+                state.books = remoteBooks;
+                
+                // Re-render all lists
+                renderList('wantToRead');
+                renderList('reading');
+                renderList('read');
+                
+                // Save to localStorage as cache
+                saveToLocalStorage();
+            }
+            
+            if (manualSync) {
+                showSyncStatus('Synced successfully!', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        showSyncStatus(`Sync failed: ${error.message}`, 'error');
+    } finally {
+        state.isSyncing = false;
+    }
+}
+
+// Push local changes to PasteMyst
+async function pushToPasteMyst() {
+    const token = state.settings.apiToken.trim();
+    const pasteId = state.settings.pasteId.trim();
+    
+    if (!token || !pasteId) return;
+    if (state.isSyncing) return;
+    
+    state.isSyncing = true;
+    
+    try {
+        const paste = await fetchPaste(pasteId, token);
+        if (paste.pasties && paste.pasties.length > 0) {
+            await updatePaste(pasteId, token, paste.pasties[0]._id);
+        }
+    } catch (error) {
+        console.error('Push error:', error);
+    } finally {
+        state.isSyncing = false;
+    }
+}
+
+// Show sync status message
+function showSyncStatus(message, type = 'info') {
+    syncStatus.textContent = message;
+    syncStatus.className = `sync-status sync-${type}`;
+    
+    if (type === 'success') {
+        setTimeout(() => {
+            syncStatus.textContent = '';
+            syncStatus.className = 'sync-status';
+        }, 3000);
+    }
+}
+
+// Save settings
+function saveSettings() {
+    state.settings.pasteId = pasteIdInput.value.trim();
+    state.settings.apiToken = apiTokenInput.value.trim();
+    saveSettingsToStorage();
+    showSyncStatus('Settings saved!', 'success');
+}
+
+// Load settings from storage
+function loadSettingsFromStorage() {
+    const saved = localStorage.getItem('bookTrackerSettings');
+    if (saved) {
+        try {
+            state.settings = JSON.parse(saved);
+            pasteIdInput.value = state.settings.pasteId || '';
+            apiTokenInput.value = state.settings.apiToken || '';
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
+    }
+}
+
+// Save settings to storage
+function saveSettingsToStorage() {
+    localStorage.setItem('bookTrackerSettings', JSON.stringify(state.settings));
+}
+
+// ===== LOCAL STORAGE FUNCTIONS =====
+
 // Local storage functions
 function saveToLocalStorage() {
     localStorage.setItem('bookTrackerData', JSON.stringify(state.books));
+    // Also push to PasteMyst if configured
+    pushToPasteMyst();
 }
 
 function loadFromLocalStorage() {

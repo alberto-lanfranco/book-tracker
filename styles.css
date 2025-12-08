@@ -427,6 +427,165 @@ body.keyboard-open .bottom-nav {
     display: none;
 }
 
+/* Settings View */
+.settings-content {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.settings-section {
+    background: var(--bg-secondary);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.settings-section h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.settings-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.settings-description a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.settings-description a:active {
+    opacity: 0.7;
+}
+
+.settings-field {
+    margin-bottom: 20px;
+}
+
+.settings-field label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.settings-field input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border: none;
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 15px;
+    outline: none;
+    transition: background 0.2s ease;
+}
+
+.settings-field input:focus {
+    background: var(--bg-primary);
+}
+
+.field-hint {
+    display: block;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: 6px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: var(--text-primary);
+    margin-right: 8px;
+}
+
+.btn-primary:active {
+    background: var(--accent-hover);
+}
+
+.sync-status {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.sync-info {
+    background: rgba(10, 132, 255, 0.1);
+    color: var(--accent);
+}
+
+.sync-success {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34c759;
+}
+
+.sync-error {
+    background: rgba(255, 69, 58, 0.1);
+    color: #ff453a;
+}
+
+/* Rating Styles */
+.book-rating {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.detail-rating {
+    margin: 16px 0;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+}
+
+.detail-rating label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.detail-rating input {
+    width: 100%;
+    max-width: 200px;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 15px;
+    outline: none;
+    transition: background 0.2s ease;
+}
+
+.detail-rating input:focus {
+    background: var(--bg-primary);
+}
+
+@media (max-width: 480px) {
+    .settings-section {
+        padding: 16px;
+    }
+    
+    .settings-section h2 {
+        font-size: 18px;
+    }
+    
+    .detail-rating input {
+        max-width: 100%;
+    }
+}
+
 /* Book Detail Modal */
 .book-detail-modal {
     position: fixed;

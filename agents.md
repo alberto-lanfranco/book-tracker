@@ -472,6 +472,26 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Clear cache: Unregister service worker in DevTools
 - Force sync: Click "Sync Now" in Settings and watch console
 
+## Version Management
+
+### Semantic Versioning
+- **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
+- **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
+- **Display**: Shown in Settings tab under "About" section
+- **When to Update**:
+  - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
+  - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
+  - **PATCH**: Bug fixes, minor improvements, documentation updates
+
+### Agent Responsibilities
+- **Always update version** when making changes:
+  - New features → increment MINOR version (e.g., 1.0.0 → 1.1.0)
+  - Bug fixes → increment PATCH version (e.g., 1.1.0 → 1.1.1)
+  - Breaking changes → increment MAJOR version (e.g., 1.1.0 → 2.0.0)
+- Update both `APP_VERSION` in `app.js` and `CACHE_VERSION` in `sw.js`
+- Keep versions synchronized between app and service worker
+- Document version changes in commit messages
+
 ## Code Style Guidelines
 
 ### JavaScript

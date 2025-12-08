@@ -1,3 +1,6 @@
+// App version (semantic versioning)
+const APP_VERSION = '1.0.0';
+
 // Register service worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -43,6 +46,9 @@ function init() {
     loadSettingsFromStorage();
     loadFromLocalStorage();
     loadSortPreference();
+    
+    // Display app version
+    document.getElementById('appVersion').textContent = APP_VERSION;
     
     // Render all lists
     renderList('wantToRead');

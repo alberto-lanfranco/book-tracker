@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 
 // Register service worker
 if ('serviceWorker' in navigator) {
@@ -164,7 +164,7 @@ async function handleSearch() {
     searchResults.innerHTML = '<div class="loading">Searching...</div>';
 
     try {
-        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books&langRestrict=en`);
+        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books&langRestrict=en&orderBy=relevance`);
         
         // Check for rate limit or quota errors
         if (response.status === 429) {

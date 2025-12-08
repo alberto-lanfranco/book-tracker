@@ -24,7 +24,8 @@ const state = {
         gistId: '',
         apiToken: ''
     },
-    isSyncing: false
+    isSyncing: false,
+    lastSyncTime: null // Track last sync timestamp
 };
 
 // DOM elements
@@ -120,6 +121,18 @@ function setupEventListeners() {
     // Maintenance handlers
     clearCacheBtn.addEventListener('click', clearLocalCache);
     updatePWABtn.addEventListener('click', updatePWA);
+    
+    // Auto-sync on focus (if last sync > 5 minutes ago)
+    window.addEventListener('focus', () => {
+        if (state.settings.apiToken && state.settings.gistId) {
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            if (!state.lastSyncTime || (now - state.lastSyncTime) > fiveMinutes) {
+                syncWithGitHub(false);
+            }
+        }
+    });
     
     // Sort handlers
     const sortBySelect = document.getElementById('sortBy');
@@ -1044,6 +1057,9 @@ async function syncWithGitHub(manualSync = false) {
                 showSyncStatus('Synced successfully!', 'success');
             }
         }
+        
+        // Update last sync time on successful sync
+        state.lastSyncTime = Date.now();
     } catch (error) {
         console.error('Sync error:', error);
         let errorMsg = error.message;

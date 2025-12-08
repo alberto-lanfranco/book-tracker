@@ -164,7 +164,7 @@ async function handleSearch() {
     searchResults.innerHTML = '<div class="loading">Searching...</div>';
 
     try {
-        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books`);
+        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books&langRestrict=en`);
         
         // Check for rate limit or quota errors
         if (response.status === 429) {

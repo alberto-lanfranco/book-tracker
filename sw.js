@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.1.1';
+const CACHE_VERSION = '1.2.0';
 const CACHE_NAME = `book-tracker-v${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
@@ -6,8 +6,9 @@ const urlsToCache = [
   '/styles.css',
   '/app.js',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/favicon.svg',
+  '/icon-192.svg',
+  '/icon-512.svg'
 ];
 
 // Install event - cache resources

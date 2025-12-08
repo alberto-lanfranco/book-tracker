@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Icon Generator</title>
+</head>
+<body>
+    <h2>Generating icons...</h2>
+    <canvas id="canvas512" width="512" height="512"></canvas>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+    <canvas id="canvas32" width="32" height="32"></canvas>
+    
+    <script>
+        function generateIcon(canvasId, size, fontSize) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Book emoji
+            ctx.font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('📖', size/2, size/2);
+            
+            // Download link
+            const link = document.createElement('a');
+            const filename = canvasId === 'canvas512' ? 'icon-512.png' : 
+                           canvasId === 'canvas192' ? 'icon-192.png' : 'favicon.png';
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.textContent = `Download ${filename}`;
+            document.body.appendChild(link);
+            document.body.appendChild(document.createElement('br'));
+        }
+        
+        generateIcon('canvas512', 512, 360);
+        generateIcon('canvas192', 192, 136);
+        generateIcon('canvas32', 32, 24);
+        
+        document.body.innerHTML += '<p>✅ Icons generated! Click links above to download.</p>';
+    </script>
+</body>
+</html>

@@ -30,7 +30,7 @@ book-tracker/
 - **To Read View**: Books to be read
 - **Reading View**: Currently reading
 - **Read View**: Completed books
-- **Settings View**: Configure PasteMyst sync
+- **Settings View**: Configure GitHub Gist sync
 
 #### 2. State Management
 ```javascript
@@ -69,55 +69,62 @@ state = {
 
 ## API Integration
 
-### PasteMyst API
+### GitHub Gist API
 
 #### Authentication
 ```javascript
 headers: {
-    'Authorization': `Bearer ${apiToken}`,
+    'Authorization': `token ${apiToken}`,
+    'Accept': 'application/vnd.github+json',
     'Content-Type': 'application/json'
 }
 ```
 
 #### Endpoints
 
-**Fetch Paste**
+**Fetch Gist**
 ```
-GET https://paste.myst.rs/api/v2/paste/{pasteId}
+GET https://api.github.com/gists/{gistId}
 ```
-Returns paste object with pasties array containing content.
+Returns gist object with files object containing file content.
 
-**Create Paste**
+**Create Gist**
 ```
-POST https://paste.myst.rs/api/v2/paste
+POST https://api.github.com/gists
 Body: {
-    "title": "Book Tracker Data",
-    "pasties": [{
-        "title": "books.tsv",
-        "language": "plain text",
-        "code": "{tsv content}"
-    }]
+    "description": "Book Tracker Database",
+    "public": false,
+    "files": {
+        "books.tsv": {
+            "content": "{tsv content}"
+        }
+    }
 }
 ```
-Returns paste object with new pasteId.
+Returns gist object with new gist.id.
 
-**Update Paste**
+**Update Gist**
 ```
-PATCH https://paste.myst.rs/api/v2/paste/{pasteId}
+PATCH https://api.github.com/gists/{gistId}
 Body: {
-    "pasties": [{
-        "title": "books.tsv",
-        "language": "plain text",
-        "code": "{tsv content}"
-    }]
+    "files": {
+        "books.tsv": {
+            "content": "{tsv content}"
+        }
+    }
 }
 ```
 
 #### Error Handling
-- 404: Paste not found (invalid ID)
+- 404: Gist not found (invalid ID)
 - 401: Unauthorized (invalid token)
-- 429: Rate limit exceeded (5 req/sec)
+- 403: Token lacks permission or rate limit exceeded
+- 422: Invalid request
 - Network errors: Show error status
+
+#### Rate Limits
+- Authenticated: 5000 requests/hour
+- Token needs "gist" scope
 
 ### Google Books API
 - **Endpoint**: `https://www.googleapis.com/books/v1/volumes`
@@ -189,13 +196,13 @@ Body: {
 ### 4. Data Persistence
 
 #### Cloud Sync (Primary Storage)
-- **Service**: PasteMyst (https://paste.myst.rs)
+- **Service**: GitHub Gist (https://gist.github.com)
 - **Format**: TSV (Tab-Separated Values) - minimal schema
-- **Source of Truth**: PasteMyst paste stores ISBN, list placement, and ratings only
-- **Authentication**: Bearer token via API key
-- **Endpoint**: https://paste.myst.rs/api/v2
-- **Rate Limit**: 5 requests/second
-- **Sync Strategy**: Cloud stores essential data only (isbn, list, rating). Full book metadata is fetched from Google Books API on sync and cached locally.
+- **Source of Truth**: GitHub Gist stores ISBN, list placement, ratings, tags, and timestamps
+- **Authentication**: Personal access token with "gist" scope
+- **Endpoint**: https://api.github.com/gists
+- **Rate Limit**: 5000 requests/hour (authenticated)
+- **Sync Strategy**: Cloud stores essential data only (isbn, list, rating, tags, timestamp). Full book metadata is fetched from Google Books API on sync and cached locally.
 
 #### TSV Structure
 ```tsv
@@ -217,49 +224,49 @@ isbn	list	rating	tags	addedAt
 - Saves entire state.books object as JSON
 - Loaded on app initialization
 - Auto-saves on any book operation
-- Syncs to PasteMyst automatically after each save
+- Syncs to GitHub Gist automatically after each save
 
 #### Settings Storage
 - localStorage key: `bookTrackerSettings`
-- Stores: pasteId, apiToken
+- Stores: gistId, apiToken
 - Persists between sessions
 
 ### 5. Cloud Sync Flow
 
 #### Initial Setup (Settings View)
-1. User enters PasteMyst API token
-2. User enters existing Paste ID (or leaves empty for new)
-3. Click "Save Settings" → `saveSettings()`
-4. If Paste ID empty: `createPaste()` → new paste created
-5. Settings saved to localStorage
-6. Returns to list view
+1. User generates GitHub personal access token with "gist" scope at github.com/settings/tokens
+2. User enters token in settings
+3. User enters existing Gist ID (or leaves empty for new)
+4. Click "Save Settings" → `saveSettings()`
+5. If Gist ID empty: `createGist()` → new gist created on first sync
+6. Settings saved to localStorage
 
 #### Auto-Sync on Startup
 1. App loads → `init()`
 2. Loads settings from localStorage
-3. If token + pasteId exist: `syncWithPasteMyst(false)`
-4. Fetches paste → `fetchPaste(pasteId)`
+3. If token + gistId exist: `syncWithGitHub(false)`
+4. Fetches gist → `fetchGist(gistId)`
 5. Parses TSV → `tsvToBooks(tsvContent)`
 6. For each ISBN in TSV:
    - Check local cache first
    - If not cached, fetch book data from Google Books API
-7. Builds complete book objects with cloud ratings
+7. Builds complete book objects with cloud data
 8. Updates state (cloud takes precedence)
 9. Updates UI
 
 #### Manual Sync
 1. User clicks "Sync Now" button
-2. `syncWithPasteMyst(true)` with showStatus=true
+2. `syncWithGitHub(true)` with showStatus=true
 3. Shows "Syncing..." status message
-4. Fetches paste, parses, updates state
+4. Fetches gist, parses, updates state
 5. Shows success/error status message
 
 #### Push on Change
-1. Any book operation (add/move/delete/rate)
+1. Any book operation (add/move/delete/rate/tag)
 2. `saveToLocalStorage()` called (caches full book data locally)
-3. Automatically calls `pushToPasteMyst()`
-4. Converts books to minimal TSV → `booksToTSV()` (only isbn, list, rating)
-5. Updates paste → `updatePaste(pasteId, tsvContent)`
+3. Automatically calls `pushToGitHub()`
+4. Converts books to minimal TSV → `booksToTSV()` (isbn, list, rating, tags, addedAt)
+5. Updates gist → `updateGist(gistId, tsvContent)`
 6. Silent push (no UI status shown)
 7. Note: Only books with ISBN are synced to cloud
 
@@ -420,7 +427,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Custom backend proxy (for Goodreads scraping)
 
 ### Storage Alternatives
-- GitHub Gist (similar to PasteMyst, requires GitHub auth)
+- PasteMyst (paste-based storage, simpler than GitHub but less reliable)
 - Pastebin.com (less developer-friendly API)
 - JSONBin.io (JSON-focused, rate limits)
 - Firebase Realtime Database (requires account)
@@ -442,9 +449,9 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 1. **Search not working**: Check Google Books API quota
 2. **Books not persisting**: Check localStorage availability/quota
 3. **Sync not working**: 
-   - Verify API token is valid (generate at paste.myst.rs)
-   - Check paste ID format (alphanumeric string)
-   - Verify rate limits not exceeded (5 req/sec)
+   - Verify GitHub token is valid (generate at github.com/settings/tokens with "gist" scope)
+   - Check gist ID format (alphanumeric string)
+   - Verify rate limits not exceeded (5000 req/hour)
    - Check network connectivity
 4. **Service Worker not updating**: Increment cache version
 5. **Icons not showing**: SVG must be inline in HTML/JS
@@ -458,10 +465,10 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Inspect localStorage: `localStorage.getItem('bookTrackerData')`
 - Inspect settings: `localStorage.getItem('bookTrackerSettings')`
 - Test Google Books API: Open endpoint URL in browser
-- Test PasteMyst API: 
-  - GET https://paste.myst.rs/api/v2/paste/{pasteId}
+- Test GitHub Gist API: 
+  - GET https://api.github.com/gists/{gistId}
   - Check response in browser DevTools
-- View paste content: https://paste.myst.rs/{pasteId}
+- View gist content: https://gist.github.com/{gistId}
 - Clear cache: Unregister service worker in DevTools
 - Force sync: Click "Sync Now" in Settings and watch console
 

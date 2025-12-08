@@ -91,19 +91,19 @@
             </header>
             <main class="content settings-content">
                 <div class="settings-section">
-                    <h2>Cloud Sync (PasteMyst)</h2>
-                    <p class="settings-description">Sync your book lists with a TSV file stored on <a href="https://paste.myst.rs/" target="_blank" rel="noopener noreferrer">PasteMyst</a>. The paste file is the single source of truth.</p>
+                    <h2>Cloud Sync (GitHub Gist)</h2>
+                    <p class="settings-description">Sync your book lists with a TSV file stored as a <a href="https://gist.github.com/" target="_blank" rel="noopener noreferrer">GitHub Gist</a>. The gist is the single source of truth.</p>
                     
                     <div class="settings-field">
-                        <label for="pasteId">Paste ID</label>
-                        <input type="text" id="pasteId" placeholder="e.g., abc123" autocomplete="off">
-                        <span class="field-hint">Leave empty to create a new paste on first sync</span>
+                        <label for="gistId">Gist ID</label>
+                        <input type="text" id="gistId" placeholder="e.g., abc123def456" autocomplete="off">
+                        <span class="field-hint">Leave empty to create a new gist on first sync</span>
                     </div>
                     
                     <div class="settings-field">
-                        <label for="apiToken">API Token</label>
-                        <input type="password" id="apiToken" placeholder="Your PasteMyst access token" autocomplete="off">
-                        <span class="field-hint">Get token from paste.myst.rs/settings/access_tokens</span>
+                        <label for="apiToken">GitHub Token</label>
+                        <input type="password" id="apiToken" placeholder="Your GitHub personal access token" autocomplete="off">
+                        <span class="field-hint">Generate token at github.com/settings/tokens with "gist" scope</span>
                     </div>
                     
                     <button id="saveSettings" class="btn btn-primary">Save Settings</button>

@@ -18,7 +18,7 @@ const state = {
     sortBy: 'dateAdded', // dateAdded, title, author, year, rating
     sortOrder: 'desc', // asc or desc
     settings: {
-        pasteId: '',
+        gistId: '',
         apiToken: ''
     },
     isSyncing: false
@@ -29,7 +29,7 @@ const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
 const navItems = document.querySelectorAll('.nav-item');
 const views = document.querySelectorAll('.view');
-const pasteIdInput = document.getElementById('pasteId');
+const gistIdInput = document.getElementById('gistId');
 const apiTokenInput = document.getElementById('apiToken');
 const saveSettingsBtn = document.getElementById('saveSettings');
 const syncNowBtn = document.getElementById('syncNow');
@@ -55,8 +55,8 @@ function init() {
     setupEventListeners();
     
     // Auto-sync on startup if configured
-    if (state.settings.apiToken && state.settings.pasteId) {
-        syncWithPasteMyst(false);
+    if (state.settings.apiToken && state.settings.gistId) {
+        syncWithGitHub(false);
     }
 }
 
@@ -109,7 +109,7 @@ function setupEventListeners() {
 
     // Settings handlers
     saveSettingsBtn.addEventListener('click', saveSettings);
-    syncNowBtn.addEventListener('click', () => syncWithPasteMyst(true));
+    syncNowBtn.addEventListener('click', () => syncWithGitHub(true));
     
     // Maintenance handlers
     clearCacheBtn.addEventListener('click', clearLocalCache);
@@ -882,26 +882,28 @@ async function tsvToBooks(tsv) {
 }
 
 // Fetch paste from PasteMyst
-async function fetchPaste(pasteId, token) {
-    const headers = {};
+async function fetchGist(gistId, token) {
+    const headers = {
+        'Accept': 'application/vnd.github+json'
+    };
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers['Authorization'] = `token ${token}`;
     }
     
-    const response = await fetch(`https://paste.myst.rs/api/v2/paste/${pasteId}`, {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
         headers
     });
     
     if (!response.ok) {
-        let errorMsg = 'Failed to fetch paste';
+        let errorMsg = 'Failed to fetch gist';
         if (response.status === 404) {
-            errorMsg = 'Paste not found. Check your Paste ID in Settings.';
+            errorMsg = 'Gist not found. Check your Gist ID in Settings.';
         } else if (response.status === 401) {
-            errorMsg = 'Invalid API token. Please check your token in Settings.';
-        } else if (response.status === 429) {
-            errorMsg = 'Rate limit exceeded. Please wait a moment and try again.';
+            errorMsg = 'Invalid GitHub token. Please check your token in Settings.';
+        } else if (response.status === 403) {
+            errorMsg = 'GitHub token lacks permission or rate limit exceeded.';
         } else {
-            errorMsg = `Failed to fetch paste (${response.status}).`;
+            errorMsg = `Failed to fetch gist (${response.status}).`;
         }
         throw new Error(errorMsg);
     }
@@ -909,41 +911,38 @@ async function fetchPaste(pasteId, token) {
     return await response.json();
 }
 
-// Create new paste on PasteMyst
-async function createPaste(token) {
+// Create new gist on GitHub
+async function createGist(token) {
     const tsv = booksToTSV();
     
-    const response = await fetch('https://paste.myst.rs/api/v2/paste', {
+    const response = await fetch('https://api.github.com/gists', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Accept': 'application/vnd.github+json',
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            title: 'Book Tracker Database',
-            expiresIn: 'never',
-            isPrivate: true,
-            pasties: [
-                {
-                    _id: '',
-                    title: 'books.tsv',
-                    language: 'plain text',
-                    code: tsv
+            description: 'Book Tracker Database',
+            public: false,
+            files: {
+                'books.tsv': {
+                    content: tsv
                 }
-            ]
+            }
         })
     });
     
     if (!response.ok) {
-        let errorMsg = 'Failed to create paste';
+        let errorMsg = 'Failed to create gist';
         if (response.status === 401) {
-            errorMsg = 'Invalid API token. Please check your token in Settings.';
+            errorMsg = 'Invalid GitHub token. Please check your token in Settings.';
         } else if (response.status === 403) {
-            errorMsg = 'API token lacks permission. Generate a new token at paste.myst.rs (Settings → API Tokens).';
-        } else if (response.status === 429) {
-            errorMsg = 'Rate limit exceeded. Please wait a moment and try again.';
+            errorMsg = 'GitHub token lacks permission. Generate a new token at github.com/settings/tokens with "gist" scope.';
+        } else if (response.status === 422) {
+            errorMsg = 'Invalid request. Please check your settings.';
         } else {
-            errorMsg = `Failed to create paste (${response.status}). Check your API token.`;
+            errorMsg = `Failed to create gist (${response.status}). Check your GitHub token.`;
         }
         throw new Error(errorMsg);
     }
@@ -951,40 +950,38 @@ async function createPaste(token) {
     return await response.json();
 }
 
-// Update existing paste on PasteMyst
-async function updatePaste(pasteId, token, pastyId) {
+// Update existing gist on GitHub
+async function updateGist(gistId, token) {
     const tsv = booksToTSV();
     
-    const response = await fetch(`https://paste.myst.rs/api/v2/paste/${pasteId}`, {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
         method: 'PATCH',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Accept': 'application/vnd.github+json',
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            pasties: [
-                {
-                    _id: pastyId,
-                    title: 'books.tsv',
-                    language: 'plain text',
-                    code: tsv
+            files: {
+                'books.tsv': {
+                    content: tsv
                 }
-            ]
+            }
         })
     });
     
     if (!response.ok) {
-        let errorMsg = 'Failed to update paste';
+        let errorMsg = 'Failed to update gist';
         if (response.status === 401) {
-            errorMsg = 'Invalid API token. Please check your token in Settings.';
+            errorMsg = 'Invalid GitHub token. Please check your token in Settings.';
         } else if (response.status === 403) {
-            errorMsg = 'API token lacks permission. Generate a new token at paste.myst.rs (Settings → API Tokens).';
+            errorMsg = 'GitHub token lacks permission or rate limit exceeded.';
         } else if (response.status === 404) {
-            errorMsg = 'Paste not found. The Paste ID may be invalid. Try creating a new paste by clearing the Paste ID field.';
-        } else if (response.status === 429) {
-            errorMsg = 'Rate limit exceeded. Please wait a moment and try again.';
+            errorMsg = 'Gist not found. The Gist ID may be invalid. Try creating a new gist by clearing the Gist ID field.';
+        } else if (response.status === 422) {
+            errorMsg = 'Invalid request. Please check your settings.';
         } else {
-            errorMsg = `Failed to update paste (${response.status}). Check your settings.`;
+            errorMsg = `Failed to update gist (${response.status}). Check your settings.`;
         }
         throw new Error(errorMsg);
     }
@@ -993,15 +990,15 @@ async function updatePaste(pasteId, token, pastyId) {
 }
 
 // Main sync function
-async function syncWithPasteMyst(manualSync = false) {
+async function syncWithGitHub(manualSync = false) {
     if (state.isSyncing) return;
     
     const token = state.settings.apiToken.trim();
-    const pasteId = state.settings.pasteId.trim();
+    const gistId = state.settings.gistId.trim();
     
     if (!token) {
         if (manualSync) {
-            showSyncStatus('Please configure API token in settings', 'error');
+            showSyncStatus('Please configure GitHub token in settings', 'error');
         }
         return;
     }
@@ -1010,19 +1007,19 @@ async function syncWithPasteMyst(manualSync = false) {
     if (manualSync) showSyncStatus('Syncing...', 'info');
     
     try {
-        if (!pasteId) {
-            // Create new paste
-            const paste = await createPaste(token);
-            state.settings.pasteId = paste._id;
-            pasteIdInput.value = paste._id;
+        if (!gistId) {
+            // Create new gist
+            const gist = await createGist(token);
+            state.settings.gistId = gist.id;
+            gistIdInput.value = gist.id;
             saveSettingsToStorage();
-            showSyncStatus(`Synced! New paste created: ${paste._id}`, 'success');
+            showSyncStatus(`Synced! New gist created: ${gist.id}`, 'success');
         } else {
-            // Fetch existing paste and sync
-            const paste = await fetchPaste(pasteId, token);
+            // Fetch existing gist and sync
+            const gist = await fetchGist(gistId, token);
             
-            if (paste.pasties && paste.pasties.length > 0) {
-                const tsv = paste.pasties[0].code;
+            if (gist.files && gist.files['books.tsv']) {
+                const tsv = gist.files['books.tsv'].content;
                 const remoteBooks = await tsvToBooks(tsv);
                 
                 // Remote is source of truth - overwrite local
@@ -1053,21 +1050,18 @@ async function syncWithPasteMyst(manualSync = false) {
     }
 }
 
-// Push local changes to PasteMyst
-async function pushToPasteMyst() {
+// Push local changes to GitHub
+async function pushToGitHub() {
     const token = state.settings.apiToken.trim();
-    const pasteId = state.settings.pasteId.trim();
+    const gistId = state.settings.gistId.trim();
     
-    if (!token || !pasteId) return;
+    if (!token || !gistId) return;
     if (state.isSyncing) return;
     
     state.isSyncing = true;
     
     try {
-        const paste = await fetchPaste(pasteId, token);
-        if (paste.pasties && paste.pasties.length > 0) {
-            await updatePaste(pasteId, token, paste.pasties[0]._id);
-        }
+        await updateGist(gistId, token);
     } catch (error) {
         console.error('Push error:', error);
     } finally {
@@ -1090,7 +1084,7 @@ function showSyncStatus(message, type = 'info') {
 
 // Save settings
 function saveSettings() {
-    state.settings.pasteId = pasteIdInput.value.trim();
+    state.settings.gistId = gistIdInput.value.trim();
     state.settings.apiToken = apiTokenInput.value.trim();
     saveSettingsToStorage();
     showSyncStatus('Settings saved!', 'success');
@@ -1102,7 +1096,7 @@ function loadSettingsFromStorage() {
     if (saved) {
         try {
             state.settings = JSON.parse(saved);
-            pasteIdInput.value = state.settings.pasteId || '';
+            gistIdInput.value = state.settings.gistId || '';
             apiTokenInput.value = state.settings.apiToken || '';
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -1149,7 +1143,7 @@ function loadSortPreference() {
 function saveToLocalStorage() {
     localStorage.setItem('bookTrackerData', JSON.stringify(state.books));
     // Also push to PasteMyst if configured
-    pushToPasteMyst();
+    pushToGitHub();
 }
 
 function loadFromLocalStorage() {

@@ -1,5 +1,24 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
+
+// Helper functions for rating tags
+function getRatingFromTags(tags) {
+    if (!tags) return null;
+    const ratingTag = tags.find(tag => tag.match(/^\d{2}_stars$/));
+    if (!ratingTag) return null;
+    return parseInt(ratingTag.substring(0, 2));
+}
+
+function setRatingTag(tags, rating) {
+    // Remove any existing rating tags
+    const tagsWithoutRating = tags.filter(tag => !tag.match(/^\d{2}_stars$/));
+    // Add new rating tag if provided
+    if (rating && rating >= 1 && rating <= 10) {
+        const ratingTag = rating.toString().padStart(2, '0') + '_stars';
+        tagsWithoutRating.push(ratingTag);
+    }
+    return tagsWithoutRating;
+}
 
 // Register service worker
 if ('serviceWorker' in navigator) {
@@ -407,11 +426,14 @@ function changeBookListStatus(bookId, newListTag) {
     }
 }
 
-// Update book rating
+// Update book rating (stored as tag)
 function updateBookRating(bookId, rating) {
     const book = state.books.find(b => b.id === bookId);
     if (book) {
-        book.rating = rating;
+        // Ensure tags array exists
+        if (!book.tags) book.tags = [];
+        // Set rating tag (removes old rating tag, adds new one)
+        book.tags = setRatingTag(book.tags, rating);
         saveToLocalStorage();
         renderBooks();
     }
@@ -482,8 +504,8 @@ function sortBooks(books) {
                 bVal = b.year === 'N/A' ? '0' : b.year;
                 break;
             case 'rating':
-                aVal = a.rating || 0;
-                bVal = b.rating || 0;
+                aVal = getRatingFromTags(a.tags) || 0;
+                bVal = getRatingFromTags(b.tags) || 0;
                 break;
             case 'dateAdded':
             default:
@@ -554,13 +576,17 @@ function createBookCard(book) {
 
     const description = book.description ? `<div class="book-description">${book.description.length > 150 ? book.description.substring(0, 150) + '...' : book.description}</div>` : '';
     
-    // Show rating if book has one
-    const ratingDisplay = book.rating 
-        ? `<div class="book-rating">⭐ ${book.rating}/10</div>` 
+    // Show rating if book has one (extract from tags)
+    const rating = getRatingFromTags(book.tags);
+    const ratingDisplay = rating 
+        ? `<div class="book-rating">⭐ ${rating}/10</div>` 
         : '';
     
-    // Show tags (filter out list status tags from display)
-    const displayTags = book.tags ? book.tags.filter(t => !['to_read', 'reading', 'read'].includes(t)) : [];
+    // Show tags (filter out list status tags and rating tags from display)
+    const displayTags = book.tags ? book.tags.filter(t => 
+        !['to_read', 'reading', 'read'].includes(t) && 
+        !t.match(/^\d{2}_stars$/)
+    ) : [];
     const tags = displayTags.length > 0 
         ? `<div class="book-tags">${displayTags.map(tag => `<span class="tag-badge">${tag}</span>`).join('')}</div>` 
         : '';
@@ -639,11 +665,14 @@ function showBookDetail(book, source = 'list') {
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
 
-    // Show tags section for books in lists (filter out list status tags)
+    // Show tags section for books in lists (filter out list status tags and rating tags)
     let tagsSection = '';
     if (source === 'list') {
         const allTags = book.tags || [];
-        const displayTags = allTags.filter(tag => !['to_read', 'reading', 'read'].includes(tag));
+        const displayTags = allTags.filter(tag => 
+            !['to_read', 'reading', 'read'].includes(tag) && 
+            !tag.match(/^\d{2}_stars$/)
+        );
         const tagPills = displayTags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
         tagsSection = `
             <div class="detail-tags">
@@ -660,7 +689,7 @@ function showBookDetail(book, source = 'list') {
     let ratingSection = '';
     const hasReadTag = book.tags && book.tags.includes('read');
     if (source === 'list' && hasReadTag) {
-        const currentRating = book.rating || 0;
+        const currentRating = getRatingFromTags(book.tags) || 0;
         let stars = '';
         for (let i = 1; i <= 10; i++) {
             const filled = i <= currentRating ? 'filled' : '';
@@ -840,7 +869,7 @@ function closeBookDetail() {
 // Convert books to TSV format (minimal: isbn, rating, tags, addedAt)
 // Tags now include list status (to_read, reading, read)
 function booksToTSV() {
-    const lines = ['isbn\trating\ttags\taddedAt'];
+    const lines = ['isbn\ttags\taddedAt'];
     
     state.books.forEach(book => {
         // Only sync books that have ISBN
@@ -848,7 +877,6 @@ function booksToTSV() {
             const tags = book.tags && book.tags.length > 0 ? book.tags.join(',') : '';
             const row = [
                 book.isbn,
-                book.rating || '',
                 tags,
                 book.addedAt || ''
             ];
@@ -860,7 +888,7 @@ function booksToTSV() {
 }
 
 // Parse TSV to books (fetch full data from Google Books API using ISBN)
-// New format: isbn, rating, tags, addedAt (tags include list status)
+// New format: isbn, tags, addedAt (tags include list status and rating)
 async function tsvToBooks(tsv) {
     const lines = tsv.trim().split('\n');
     if (lines.length < 1) return [];
@@ -874,7 +902,7 @@ async function tsvToBooks(tsv) {
         const cols = lines[i].split('\t');
         if (cols.length < 2) continue;
         
-        const [isbn, rating, tagsStr, addedAt] = cols;
+        const [isbn, tagsStr, addedAt] = cols;
         const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
         
         // Check if we already have this book in local cache
@@ -884,7 +912,6 @@ async function tsvToBooks(tsv) {
             // Use cached data
             const book = {
                 ...cachedBook,
-                rating: rating ? parseInt(rating) : null,
                 tags: tags,
                 addedAt: addedAt || null
             };
@@ -907,7 +934,6 @@ async function tsvToBooks(tsv) {
                                 coverUrl: getBestCoverUrl(volumeInfo.imageLinks),
                                 isbn: isbn,
                                 description: volumeInfo.description || null,
-                                rating: rating ? parseInt(rating) : null,
                                 tags: tags,
                                 addedAt: addedAt || null
                             };

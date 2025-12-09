@@ -57,8 +57,7 @@ state = {
     coverUrl: string,     // Google Books thumbnail URL
     isbn: string,         // Optional
     description: string,  // Optional, HTML may be present
-    rating: number,       // Optional, 1-10 for books in Read list
-    tags: string[],       // Optional, user-defined tags
+    tags: string[],       // User-defined tags, list status (to_read/reading/read), and rating (01_stars to 10_stars)
     addedAt: string       // ISO 8601 timestamp of when book was added to current list
 }
 ```
@@ -201,22 +200,24 @@ Body: {
 - **Authentication**: Personal access token with "gist" scope
 - **Endpoint**: https://api.github.com/gists
 - **Rate Limit**: 5000 requests/hour (authenticated)
-- **Sync Strategy**: Cloud stores essential data only (isbn, list, rating, tags, timestamp). Full book metadata is fetched from Google Books API on sync and cached locally.
+- **Sync Strategy**: Cloud stores essential data only (isbn, tags including list status and rating, timestamp). Full book metadata is fetched from Google Books API on sync and cached locally.
 
 #### TSV Structure
 ```tsv
-isbn	rating	tags	addedAt
-9780547928227		to_read,fantasy,classic	2025-12-08T10:30:00.000Z
-9780451524935		reading,dystopian,scifi	2025-12-07T15:45:00.000Z
-9780441013593	9	read,scifi,epic	2025-12-06T20:15:00.000Z
+isbn	tags	addedAt
+9780547928227	to_read,fantasy,classic	2025-12-08T10:30:00.000Z
+9780451524935	reading,dystopian,scifi	2025-12-07T15:45:00.000Z
+9780441013593	read,09_stars,scifi,epic	2025-12-06T20:15:00.000Z
 ```
-- **Columns**: isbn, rating, tags, addedAt
+- **Columns**: isbn, tags, addedAt
 - **Delimiter**: Tab character (\t)
 - **Encoding**: UTF-8
-- **Rating**: Empty for non-Read books, 1-10 for Read books (optional)
-- **Tags**: Comma-separated list of tags (optional)
+- **Tags**: Comma-separated list including:
+  - List status: `to_read`, `reading`, or `read` (required, only one)
+  - Rating: `01_stars` to `10_stars` (optional, only one, typically for books with `read` tag)
+  - Custom tags: Any user-defined tags
 - **addedAt**: ISO 8601 timestamp of when book was added to current list (updates when moved)
-- **Data Model**: TSV stores only essential sync data (ISBN as identifier, list placement, rating, tags, timestamp). All other book metadata (title, author, cover, description) is fetched from Google Books API and cached locally only.
+- **Data Model**: TSV stores only essential sync data (ISBN as identifier, tags including list placement and rating, timestamp). All other book metadata (title, author, cover, description) is fetched from Google Books API and cached locally only.
 
 #### Local Storage (Cache)
 - localStorage key: `bookTrackerData`
@@ -264,7 +265,7 @@ isbn	rating	tags	addedAt
 1. Any book operation (add/move/delete/rate/tag)
 2. `saveToLocalStorage()` called (caches full book data locally)
 3. Automatically calls `pushToGitHub()`
-4. Converts books to minimal TSV → `booksToTSV()` (isbn, rating, tags, addedAt)
+4. Converts books to minimal TSV → `booksToTSV()` (isbn, tags, addedAt)
 5. Updates gist → `updateGist(gistId, tsvContent)`
 6. Silent push (no UI status shown)
 7. Note: Only books with ISBN are synced to cloud

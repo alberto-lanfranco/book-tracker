@@ -1,7 +1,7 @@
 # Book Tracker PWA - Developer Guide
 
 ## Overview
-A Progressive Web App (PWA) for tracking reading lists with an iOS-inspired minimal dark theme interface. Users can search for books and organize them into three lists: To Read, Reading, and Read.
+A Progressive Web App (PWA) for tracking books with an iOS-inspired minimal dark theme interface. Users can search for books, add them to a unified collection, and organize them using tags including three list status tags: To Read, Reading, and Read. Books can be filtered by tags and searched within the collection.
 
 ## Tech Stack
 - **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3
@@ -26,27 +26,23 @@ book-tracker/
 ### Core Components
 
 #### 1. Views (Bottom Navigation)
-- **Search View**: Search and add books
-- **To Read View**: Books to be read
-- **Reading View**: Currently reading
-- **Read View**: Completed books
-- **Settings View**: Configure GitHub Gist sync
+- **Add View**: Search for new books and add to collection
+- **Books View**: View all books with filtering and search capabilities
+- **Settings View**: Configure GitHub Gist sync and maintenance options
 
 #### 2. State Management
 ```javascript
 state = {
-    books: {
-        wantToRead: [],
-        reading: [],
-        read: []
-    },
-    currentList: 'wantToRead',
+    books: [],                 // Unified array of all books
+    filterTags: [],           // Active filter tags for Books view
+    searchQuery: '',          // Search query for filtering books
     sortBy: 'dateAdded',      // Sort field: dateAdded, title, author, year, rating
-    sortOrder: 'desc',         // Sort order: asc, desc
+    sortOrder: 'desc',        // Sort order: asc, desc
     settings: {
-        pasteId: '',
+        gistId: '',
         apiToken: ''
     },
+    lastSyncTime: null,       // Timestamp of last cloud sync
     isSyncing: false
 }
 ```
@@ -163,18 +159,21 @@ Body: {
 - Tap icon to add directly to list
 
 ### 2. Book Lists
+- **Filter Controls** (at top of Books view):
+  - Search input to filter books by title/author
+  - Tag filter buttons: All, To Read, Reading, Read
+  - Active filter highlighted with accent color
 - **Sort Controls** (in header):
   - Dropdown to select sort field: Date Added (default), Title, Author, Year, Rating
   - Toggle button (↑/↓) to switch between ascending/descending order
   - Preferences persist in localStorage between sessions
-  - Sort applies to current list view only
 - Books displayed as cards with:
   - Cover image (80x120px)
   - Title, author, year
-  - Rating (⭐ X/10) - displayed only for Read list books
-  - Tags (colored badges)
+  - Rating (⭐ X/10) - displayed only for books with Read tag
+  - Tags (colored badges) - list status tags hidden from display
   - Description (truncated to 150 chars)
-  - Three list icons (current one highlighted/active)
+  - Three list status icons (current one highlighted/active)
   - Delete button (far right)
 - Tap card to open detail modal
 - Empty state: "No books" message
@@ -188,7 +187,7 @@ Body: {
   - Add tags by typing and pressing Enter
   - Remove tags by clicking × button
   - Tags displayed as pills with remove button
-- **Rating input** (10 tappable stars) - shown only for books in Read list
+- **Rating input** (10 tappable stars) - shown only for books with Read tag
 - **From search**: Shows 3 list buttons to add book
 - **From list**: Shows 3 list buttons (current highlighted) + delete button
 - Click outside or X button to close
@@ -206,12 +205,12 @@ Body: {
 
 #### TSV Structure
 ```tsv
-isbn	list	rating	tags	addedAt
-9780547928227	wantToRead		fantasy,classic	2025-12-08T10:30:00.000Z
-9780451524935	reading		dystopian,scifi	2025-12-07T15:45:00.000Z
-9780441013593	read	9	scifi,epic	2025-12-06T20:15:00.000Z
+isbn	rating	tags	addedAt
+9780547928227		to_read,fantasy,classic	2025-12-08T10:30:00.000Z
+9780451524935		reading,dystopian,scifi	2025-12-07T15:45:00.000Z
+9780441013593	9	read,scifi,epic	2025-12-06T20:15:00.000Z
 ```
-- **Columns**: isbn, list, rating, tags, addedAt
+- **Columns**: isbn, rating, tags, addedAt
 - **Delimiter**: Tab character (\t)
 - **Encoding**: UTF-8
 - **Rating**: Empty for non-Read books, 1-10 for Read books (optional)
@@ -265,7 +264,7 @@ isbn	list	rating	tags	addedAt
 1. Any book operation (add/move/delete/rate/tag)
 2. `saveToLocalStorage()` called (caches full book data locally)
 3. Automatically calls `pushToGitHub()`
-4. Converts books to minimal TSV → `booksToTSV()` (isbn, list, rating, tags, addedAt)
+4. Converts books to minimal TSV → `booksToTSV()` (isbn, rating, tags, addedAt)
 5. Updates gist → `updateGist(gistId, tsvContent)`
 6. Silent push (no UI status shown)
 7. Note: Only books with ISBN are synced to cloud
@@ -281,9 +280,9 @@ isbn	list	rating	tags	addedAt
 - **Persistence**: Sort preferences saved to localStorage key `bookTrackerSort`
 - **Implementation**:
   - `sortBooks(books)`: Compares books based on state.sortBy and state.sortOrder
-  - `renderList()`: Automatically applies sorting before displaying books
+  - `renderBooks()`: Automatically applies sorting before displaying books
   - Event listeners update state and re-render on sort control changes
-- **UI Location**: Sort controls appear in header of each list view (To Read, Reading, Read)
+- **UI Location**: Sort controls appear in header of Books view
 
 ### 7. Toast Notifications
 - Success messages for:
@@ -338,7 +337,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 ### Bottom Navigation
 - Fixed position at bottom
 - Safe area support: `env(safe-area-inset-bottom)`
-- 4 nav items with icons + labels
+- 3 nav items with icons + labels
 - Active state with accent color
 - Hidden when keyboard open
 
@@ -356,27 +355,28 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 ## Common Operations
 
 ### Adding a Book
-1. Search result click → `addBookToList(book, listName)`
-2. Check for duplicates across all lists
-3. Push to `state.books[listName]`
+1. Search result click → `addBookToList(book, listTag)`
+2. Check for duplicates by ID
+3. Add book to `state.books[]` array with listTag in tags
 4. Save to localStorage
-5. Render list
+5. Render books
 6. Show toast notification
 
-### Moving a Book
+### Changing Book List Status
 1. Click non-active list icon
-2. `moveBook(bookId, fromList, toList)`
-3. Find book, remove from source, add to target
-4. Save to localStorage
-5. Render both lists
-6. Show toast notification
+2. `changeBookListStatus(bookId, newListTag)`
+3. Find book, remove old list tag, add new list tag
+4. Update addedAt timestamp
+5. Save to localStorage
+6. Render books
+7. Show toast notification
 
 ### Deleting a Book
 1. Click delete button
-2. `removeBookFromList(bookId, listName)`
-3. Filter book out of list
+2. `removeBook(bookId)`
+3. Filter book out of state.books array
 4. Save to localStorage
-5. Render list
+5. Render books
 
 ## PWA Configuration
 
@@ -413,9 +413,8 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Reading progress percentage
 - Reading statistics/analytics
 - Export/import TSV files
-- Multiple reading lists (expand TSV list column values)
+- Multiple reading lists (expand TSV tags)
 - Search filters (year, genre, language)
-- Sort options (title, author, date added)
 - Dark/light theme toggle
 - Conflict resolution UI for sync conflicts
 - Offline queue for sync operations

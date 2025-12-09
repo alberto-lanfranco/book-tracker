@@ -452,30 +452,13 @@ function switchView(viewId) {
         view.classList.toggle('active', view.id === viewId);
     });
 
-    // If switching to a list view, update the current list and render
-    if (viewId === 'wantToReadView') {
-        state.currentList = 'wantToRead';
-        renderList('wantToRead');
-    } else if (viewId === 'readingView') {
-        state.currentList = 'reading';
-        renderList('reading');
-    } else if (viewId === 'readView') {
-        state.currentList = 'read';
-        renderList('read');
+    // If switching to books view, render books
+    if (viewId === 'booksView') {
+        renderBooks();
     }
 
     // Scroll to top of new view
     window.scrollTo(0, 0);
-}
-
-// Switch list (legacy function for compatibility)
-function switchList(listName) {
-    const viewMap = {
-        'wantToRead': 'wantToReadView',
-        'reading': 'readingView',
-        'read': 'readView'
-    };
-    switchView(viewMap[listName]);
 }
 
 // Sort books based on current sort settings
@@ -557,33 +540,6 @@ function renderBooks() {
         const bookCard = createBookCard(book);
         bookListElement.appendChild(bookCard);
     });
-}
-
-function renderList(listName) {
-    const listElement = document.getElementById(listName);
-    const books = state.books[listName];
-
-    if (books.length === 0) {
-        listElement.innerHTML = '';
-        listElement.classList.add('empty');
-        return;
-    }
-
-    listElement.classList.remove('empty');
-    listElement.innerHTML = '';
-
-    // Sort books before rendering
-    const sortedBooks = sortBooks(books);
-    
-    sortedBooks.forEach(book => {
-        const bookCard = createBookCard(book);
-        listElement.appendChild(bookCard);
-    });
-}
-
-// Render current list
-function renderCurrentList() {
-    renderList(state.currentList);
 }
 
 // Create book card
@@ -683,11 +639,12 @@ function showBookDetail(book, source = 'list') {
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
 
-    // Show tags section for books in lists
+    // Show tags section for books in lists (filter out list status tags)
     let tagsSection = '';
     if (source === 'list') {
-        const tags = book.tags || [];
-        const tagPills = tags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
+        const allTags = book.tags || [];
+        const displayTags = allTags.filter(tag => !['to_read', 'reading', 'read'].includes(tag));
+        const tagPills = displayTags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
         tagsSection = `
             <div class="detail-tags">
                 <label>Tags:</label>
@@ -699,9 +656,10 @@ function showBookDetail(book, source = 'list') {
         `;
     }
 
-    // Show rating input for books in Read list
+    // Show rating input for books with Read tag
     let ratingSection = '';
-    if (source === 'list' && state.currentList === 'read') {
+    const hasReadTag = book.tags && book.tags.includes('read');
+    if (source === 'list' && hasReadTag) {
         const currentRating = book.rating || 0;
         let stars = '';
         for (let i = 1; i <= 10; i++) {
@@ -721,19 +679,19 @@ function showBookDetail(book, source = 'list') {
     if (source === 'search') {
         listActions = `
             <div class="detail-actions">
-                <button class="btn btn-icon" data-list="wantToRead" data-book-id="${book.id}" title="To Read">
+                <button class="btn btn-icon" data-tag="to_read" data-book-id="${book.id}" title="To Read">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                     </svg>
                 </button>
-                <button class="btn btn-icon" data-list="reading" data-book-id="${book.id}" title="Reading">
+                <button class="btn btn-icon" data-tag="reading" data-book-id="${book.id}" title="Reading">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg>
                 </button>
-                <button class="btn btn-icon" data-list="read" data-book-id="${book.id}" title="Read">
+                <button class="btn btn-icon" data-tag="read" data-book-id="${book.id}" title="Read">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
@@ -741,23 +699,26 @@ function showBookDetail(book, source = 'list') {
             </div>
         `;
     } else {
-        // Show move and delete buttons for books in lists
+        // Show list status and delete buttons for books in lists
+        // Determine current list tag
+        const currentTag = book.tags.find(tag => ['to_read', 'reading', 'read'].includes(tag)) || 'to_read';
+        
         const icons = {
-            wantToRead: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
+            to_read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
             reading: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
             read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>'
         };
         const labels = {
-            wantToRead: 'To Read',
+            to_read: 'To Read',
             reading: 'Reading',
             read: 'Read'
         };
         
         let buttons = '<div class="action-group">';
         for (const [key, icon] of Object.entries(icons)) {
-            const isActive = key === state.currentList;
+            const isActive = key === currentTag;
             const activeClass = isActive ? ' active' : '';
-            buttons += `<button class="btn btn-icon${activeClass}" data-list="${key}" data-book-id="${book.id}" title="${labels[key]}" ${isActive ? 'disabled' : ''}>${icon}</button>`;
+            buttons += `<button class="btn btn-icon${activeClass}" data-tag="${key}" data-book-id="${book.id}" title="${labels[key]}" ${isActive ? 'disabled' : ''}>${icon}</button>`;
         }
         buttons += '</div>';
         
@@ -795,17 +756,19 @@ function showBookDetail(book, source = 'list') {
         btn.addEventListener('click', (e) => {
             if (btn.dataset.action === 'delete') {
                 // Delete button
-                removeBookFromList(book.id, state.currentList);
+                removeBook(book.id);
                 closeBookDetail();
-            } else if (btn.dataset.list) {
-                // List buttons
+            } else if (btn.dataset.tag) {
+                // List status buttons
+                const newTag = btn.dataset.tag;
                 if (source === 'search') {
-                    addBookToList(book, btn.dataset.list);
+                    addBookToList(book, newTag);
                     closeBookDetail();
                 } else {
-                    // Move book to different list
-                    if (btn.dataset.list !== state.currentList) {
-                        moveBook(book.id, state.currentList, btn.dataset.list);
+                    // Change book list status
+                    const currentTag = book.tags.find(tag => ['to_read', 'reading', 'read'].includes(tag));
+                    if (newTag !== currentTag) {
+                        changeBookListStatus(book.id, newTag);
                         closeBookDetail();
                     }
                 }
@@ -1248,14 +1211,8 @@ function loadFromLocalStorage() {
 function clearLocalCache() {
     if (confirm('Are you sure you want to clear the local cache? This will remove all books from this device. Books synced to cloud will be restored on next sync.')) {
         localStorage.removeItem('bookTrackerData');
-        state.books = {
-            wantToRead: [],
-            reading: [],
-            read: []
-        };
-        renderList('wantToRead');
-        renderList('reading');
-        renderList('read');
+        state.books = [];
+        renderBooks();
         showMaintenanceStatus('Local cache cleared. Sync to restore from cloud.', 'success');
     }
 }

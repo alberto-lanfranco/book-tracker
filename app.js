@@ -44,22 +44,36 @@ const state = {
     lastSyncTime: null // Track last sync timestamp
 };
 
-// DOM elements
-const searchInput = document.getElementById('searchInput');
-const searchResults = document.getElementById('searchResults');
-const navItems = document.querySelectorAll('.nav-item');
-const views = document.querySelectorAll('.view');
-const gistIdInput = document.getElementById('gistId');
-const apiTokenInput = document.getElementById('apiToken');
-const saveSettingsBtn = document.getElementById('saveSettings');
-const syncNowBtn = document.getElementById('syncNow');
-const syncStatus = document.getElementById('syncStatus');
-const clearCacheBtn = document.getElementById('clearCache');
-const updatePWABtn = document.getElementById('updatePWA');
-const maintenanceStatus = document.getElementById('maintenanceStatus');
+// DOM elements (initialized after DOM loads)
+let searchInput;
+let searchResults;
+let navItems;
+let views;
+let gistIdInput;
+let apiTokenInput;
+let saveSettingsBtn;
+let syncNowBtn;
+let syncStatus;
+let clearCacheBtn;
+let updatePWABtn;
+let maintenanceStatus;
 
 // Initialize app
 function init() {
+    // Get DOM elements after DOM is loaded
+    searchInput = document.getElementById('searchInput');
+    searchResults = document.getElementById('searchResults');
+    navItems = document.querySelectorAll('.nav-item');
+    views = document.querySelectorAll('.view');
+    gistIdInput = document.getElementById('gistId');
+    apiTokenInput = document.getElementById('apiToken');
+    saveSettingsBtn = document.getElementById('saveSettings');
+    syncNowBtn = document.getElementById('syncNow');
+    syncStatus = document.getElementById('syncStatus');
+    clearCacheBtn = document.getElementById('clearCache');
+    updatePWABtn = document.getElementById('updatePWA');
+    maintenanceStatus = document.getElementById('maintenanceStatus');
+    
     loadSettingsFromStorage();
     loadFromLocalStorage();
     loadSortPreference();
@@ -1288,5 +1302,9 @@ function showMaintenanceStatus(message, type = 'info') {
     }
 }
 
-// Start the app
-init();
+// Start the app when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

@@ -1,5 +1,6 @@
 // App version (semantic versioning)
 const APP_VERSION = '2.1.1';
+console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
 function getRatingFromTags(tags) {
@@ -1171,6 +1172,10 @@ async function pushToGitHub() {
 
 // Show sync status message
 function showSyncStatus(message, type = 'info') {
+    if (!syncStatus) {
+        console.warn('syncStatus element not found');
+        return;
+    }
     syncStatus.textContent = message;
     syncStatus.className = `sync-status sync-${type}`;
     
@@ -1303,6 +1308,10 @@ function updatePWA() {
 
 // Show maintenance status message
 function showMaintenanceStatus(message, type = 'info') {
+    if (!maintenanceStatus) {
+        console.warn('maintenanceStatus element not found');
+        return;
+    }
     maintenanceStatus.textContent = message;
     maintenanceStatus.className = `sync-status sync-${type}`;
     maintenanceStatus.style.display = 'block';
@@ -1315,8 +1324,11 @@ function showMaintenanceStatus(message, type = 'info') {
 }
 
 // Start the app when DOM is ready
+console.log('Document ready state:', document.readyState);
 if (document.readyState === 'loading') {
+    console.log('Waiting for DOMContentLoaded...');
     document.addEventListener('DOMContentLoaded', init);
 } else {
+    console.log('DOM already loaded, calling init()...');
     init();
 }

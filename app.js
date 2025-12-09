@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.1.1';
 
 // Helper functions for rating tags
 function getRatingFromTags(tags) {
@@ -60,6 +60,8 @@ let maintenanceStatus;
 
 // Initialize app
 function init() {
+    console.log('Initializing app...');
+    
     // Get DOM elements after DOM is loaded
     searchInput = document.getElementById('searchInput');
     searchResults = document.getElementById('searchResults');
@@ -73,6 +75,12 @@ function init() {
     clearCacheBtn = document.getElementById('clearCache');
     updatePWABtn = document.getElementById('updatePWA');
     maintenanceStatus = document.getElementById('maintenanceStatus');
+    
+    console.log('DOM elements loaded:', {
+        searchInput: !!searchInput,
+        navItems: navItems.length,
+        views: views.length
+    });
     
     loadSettingsFromStorage();
     loadFromLocalStorage();
@@ -98,31 +106,35 @@ function init() {
 // Event listeners
 function setupEventListeners() {
     // Search on input
-    let searchTimeout;
-    searchInput.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        const query = searchInput.value.trim();
-        if (query.length > 2) {
-            searchTimeout = setTimeout(() => handleSearch(), 500);
-        } else if (query.length === 0) {
-            searchResults.innerHTML = '';
-        }
-    });
-
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            handleSearch();
-        }
-    });
+            const query = searchInput.value.trim();
+            if (query.length > 2) {
+                searchTimeout = setTimeout(() => handleSearch(), 500);
+            } else if (query.length === 0) {
+                searchResults.innerHTML = '';
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                handleSearch();
+            }
+        });
+    }
 
     // Bottom navigation
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const viewId = item.dataset.view;
-            switchView(viewId);
+    if (navItems) {
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const viewId = item.dataset.view;
+                switchView(viewId);
+            });
         });
-    });
+    }
 
     // Keyboard detection for mobile
     let initialHeight = window.innerHeight;
@@ -143,12 +155,12 @@ function setupEventListeners() {
     });
 
     // Settings handlers
-    saveSettingsBtn.addEventListener('click', saveSettings);
-    syncNowBtn.addEventListener('click', () => syncWithGitHub(true));
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
+    if (syncNowBtn) syncNowBtn.addEventListener('click', () => syncWithGitHub(true));
     
     // Maintenance handlers
-    clearCacheBtn.addEventListener('click', clearLocalCache);
-    updatePWABtn.addEventListener('click', updatePWA);
+    if (clearCacheBtn) clearCacheBtn.addEventListener('click', clearLocalCache);
+    if (updatePWABtn) updatePWABtn.addEventListener('click', updatePWA);
     
     // Auto-sync on focus (if last sync > 5 minutes ago)
     window.addEventListener('focus', () => {

@@ -14,10 +14,10 @@
 </head>
 <body>
     <div class="app">
-        <!-- Search View -->
-        <div class="view" id="searchView">
+        <!-- Add View (Search) -->
+        <div class="view active" id="addView">
             <header class="header">
-                <h1>Search</h1>
+                <h1>Add Book</h1>
             </header>
             <div class="search-container">
                 <div class="search-bar">
@@ -27,61 +27,32 @@
             </div>
         </div>
 
-        <!-- To Read View -->
-        <div class="view" id="wantToReadView">
+        <!-- Books View (All books with filtering) -->
+        <div class="view" id="booksView">
             <header class="header">
-                <h1>To Read</h1>
+                <h1>Books</h1>
                 <div class="sort-controls">
                     <select id="sortBy" class="sort-select">
                         <option value="dateAdded">Date Added</option>
                         <option value="title">Title</option>
                         <option value="author">Author</option>
                         <option value="year">Year</option>
+                        <option value="rating">Rating</option>
                     </select>
                     <button id="sortOrder" class="btn-sort" title="Toggle sort order">↓</button>
                 </div>
             </header>
             <main class="content">
-                <div class="book-list" id="wantToRead"></div>
-            </main>
-        </div>
-
-        <!-- Reading View -->
-        <div class="view" id="readingView">
-            <header class="header">
-                <h1>Reading</h1>
-                <div class="sort-controls">
-                    <select class="sort-select" disabled>
-                        <option value="dateAdded">Date Added</option>
-                        <option value="title">Title</option>
-                        <option value="author">Author</option>
-                        <option value="year">Year</option>
-                    </select>
-                    <button class="btn-sort" disabled title="Toggle sort order">↓</button>
+                <div class="filter-section">
+                    <input type="text" id="bookSearch" placeholder="Search saved books..." class="search-input">
+                    <div class="tag-filters" id="tagFilters">
+                        <button class="tag-filter active" data-tag="all">All</button>
+                        <button class="tag-filter" data-tag="to_read">To Read</button>
+                        <button class="tag-filter" data-tag="reading">Reading</button>
+                        <button class="tag-filter" data-tag="read">Read</button>
+                    </div>
                 </div>
-            </header>
-            <main class="content">
-                <div class="book-list" id="reading"></div>
-            </main>
-        </div>
-
-        <!-- Read View -->
-        <div class="view" id="readView">
-            <header class="header">
-                <h1>Read</h1>
-                <div class="sort-controls">
-                    <select class="sort-select" disabled>
-                        <option value="dateAdded">Date Added</option>
-                        <option value="title">Title</option>
-                        <option value="author">Author</option>
-                        <option value="year">Year</option>
-                        <option value="rating">Rating</option>
-                    </select>
-                    <button class="btn-sort" disabled title="Toggle sort order">↓</button>
-                </div>
-            </header>
-            <main class="content">
-                <div class="book-list" id="read"></div>
+                <div class="book-list" id="bookList"></div>
             </main>
         </div>
 
@@ -135,32 +106,20 @@
 
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-            <button class="nav-item active" data-view="searchView">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
+            <button class="nav-item active" data-view="addView">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="4" ry="4"></rect>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
                 </svg>
-                <span>Search</span>
+                <span>Add</span>
             </button>
-            <button class="nav-item" data-view="wantToReadView">
+            <button class="nav-item" data-view="booksView">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
-                <span>To Read</span>
-            </button>
-            <button class="nav-item" data-view="readingView">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                <span>Reading</span>
-            </button>
-            <button class="nav-item" data-view="readView">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Read</span>
+                <span>Books</span>
             </button>
             <button class="nav-item" data-view="settingsView">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -12,12 +12,9 @@ if ('serviceWorker' in navigator) {
 
 // App state
 const state = {
-    books: {
-        wantToRead: [],
-        reading: [],
-        read: []
-    },
-    currentList: 'wantToRead',
+    books: [], // Single array of books with tags
+    filterTags: [], // Tags to filter by in Books view
+    searchQuery: '', // Search query for saved books
     sortBy: 'dateAdded', // dateAdded, title, author, year, rating
     sortOrder: 'desc', // asc or desc
     settings: {
@@ -796,40 +793,35 @@ function closeBookDetail() {
 
 // ===== PASTEMYST SYNC FUNCTIONS =====
 
-// Convert books to TSV format (minimal: isbn, list, rating, tags, addedAt)
+// Convert books to TSV format (minimal: isbn, rating, tags, addedAt)
+// Tags now include list status (to_read, reading, read)
 function booksToTSV() {
-    const lines = ['isbn\tlist\trating\ttags\taddedAt'];
+    const lines = ['isbn\trating\ttags\taddedAt'];
     
-    for (const [listName, books] of Object.entries(state.books)) {
-        books.forEach(book => {
-            // Only sync books that have ISBN
-            if (book.isbn) {
-                const tags = book.tags && book.tags.length > 0 ? book.tags.join(',') : '';
-                const row = [
-                    book.isbn,
-                    listName,
-                    book.rating || '',
-                    tags,
-                    book.addedAt || ''
-                ];
-                lines.push(row.join('\t'));
-            }
-        });
-    }
+    state.books.forEach(book => {
+        // Only sync books that have ISBN
+        if (book.isbn) {
+            const tags = book.tags && book.tags.length > 0 ? book.tags.join(',') : '';
+            const row = [
+                book.isbn,
+                book.rating || '',
+                tags,
+                book.addedAt || ''
+            ];
+            lines.push(row.join('\t'));
+        }
+    });
     
     return lines.join('\n');
 }
 
 // Parse TSV to books (fetch full data from Google Books API using ISBN)
+// New format: isbn, rating, tags, addedAt (tags include list status)
 async function tsvToBooks(tsv) {
     const lines = tsv.trim().split('\n');
-    if (lines.length < 1) return { wantToRead: [], reading: [], read: [] };
+    if (lines.length < 1) return [];
     
-    const books = {
-        wantToRead: [],
-        reading: [],
-        read: []
-    };
+    const books = [];
     
     // Skip header line and fetch book data from Google Books API
     const fetchPromises = [];
@@ -838,15 +830,11 @@ async function tsvToBooks(tsv) {
         const cols = lines[i].split('\t');
         if (cols.length < 2) continue;
         
-        const [isbn, listName, rating, tagsStr, addedAt] = cols;
+        const [isbn, rating, tagsStr, addedAt] = cols;
         const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
         
         // Check if we already have this book in local cache
-        let cachedBook = null;
-        for (const list of Object.values(state.books)) {
-            cachedBook = list.find(b => b.isbn === isbn);
-            if (cachedBook) break;
-        }
+        const cachedBook = state.books.find(b => b.isbn === isbn);
         
         if (cachedBook) {
             // Use cached data
@@ -856,9 +844,7 @@ async function tsvToBooks(tsv) {
                 tags: tags,
                 addedAt: addedAt || null
             };
-            if (books[listName]) {
-                books[listName].push(book);
-            }
+            books.push(book);
         } else {
             // Fetch from Google Books API
             fetchPromises.push(
@@ -882,9 +868,7 @@ async function tsvToBooks(tsv) {
                                 addedAt: addedAt || null
                             };
                             
-                            if (books[listName]) {
-                                books[listName].push(book);
-                            }
+                            books.push(book);
                         }
                     })
                     .catch(err => {

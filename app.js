@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '2.0.0';
 
 // Register service worker
 if ('serviceWorker' in navigator) {
@@ -129,6 +129,40 @@ function setupEventListeners() {
         }
     });
     
+    // Search saved books (Books view)
+    const bookSearchInput = document.getElementById('bookSearch');
+    if (bookSearchInput) {
+        let bookSearchTimeout;
+        bookSearchInput.addEventListener('input', () => {
+            clearTimeout(bookSearchTimeout);
+            bookSearchTimeout = setTimeout(() => {
+                state.searchQuery = bookSearchInput.value.trim().toLowerCase();
+                renderBooks();
+            }, 300);
+        });
+    }
+
+    // Tag filter buttons (Books view)
+    const tagFilterButtons = document.querySelectorAll('.tag-filter');
+    tagFilterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const filterTag = button.dataset.tag;
+            
+            // Toggle active state
+            tagFilterButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Update filter state
+            if (filterTag === 'all') {
+                state.filterTags = [];
+            } else {
+                state.filterTags = [filterTag];
+            }
+            
+            renderBooks();
+        });
+    });
+    
     // Sort handlers
     const sortBySelect = document.getElementById('sortBy');
     const sortOrderBtn = document.getElementById('sortOrder');
@@ -137,7 +171,7 @@ function setupEventListeners() {
         sortBySelect.addEventListener('change', (e) => {
             state.sortBy = e.target.value;
             saveSortPreference();
-            renderList(state.currentList);
+            renderBooks();
         });
     }
     
@@ -146,7 +180,7 @@ function setupEventListeners() {
             state.sortOrder = state.sortOrder === 'asc' ? 'desc' : 'asc';
             sortOrderBtn.textContent = state.sortOrder === 'asc' ? '↑' : '↓';
             saveSortPreference();
-            renderList(state.currentList);
+            renderBooks();
         });
     }
 }
@@ -243,19 +277,19 @@ function createSearchResultItem(book) {
             <div class="book-year">${book.year}</div>
         </div>
         <div class="search-result-actions">
-            <button class="btn btn-icon" data-list="wantToRead" title="To Read">
+            <button class="btn btn-icon" data-tag="to_read" title="To Read">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
             </button>
-            <button class="btn btn-icon" data-list="reading" title="Reading">
+            <button class="btn btn-icon" data-tag="reading" title="Reading">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                 </svg>
             </button>
-            <button class="btn btn-icon" data-list="read" title="Read">
+            <button class="btn btn-icon" data-tag="read" title="Read">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
@@ -267,8 +301,8 @@ function createSearchResultItem(book) {
     div.querySelectorAll('.search-result-actions button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const listName = btn.dataset.list;
-            addBookToList(book, listName);
+            const listTag = btn.dataset.tag;
+            addBookToList(book, listTag);
         });
     });
 
@@ -484,6 +518,47 @@ function sortBooks(books) {
 }
 
 // Render specific list
+// Render books view with filtering
+function renderBooks() {
+    const bookListElement = document.getElementById('bookList');
+    if (!bookListElement) return; // Not on books view
+    
+    // Apply filters
+    let filteredBooks = state.books;
+    
+    // Filter by selected tags
+    if (state.filterTags.length > 0) {
+        filteredBooks = filteredBooks.filter(book => 
+            state.filterTags.some(tag => book.tags && book.tags.includes(tag))
+        );
+    }
+    
+    // Filter by search query
+    if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase();
+        filteredBooks = filteredBooks.filter(book =>
+            book.title.toLowerCase().includes(query) ||
+            book.author.toLowerCase().includes(query) ||
+            (book.tags && book.tags.some(tag => tag.toLowerCase().includes(query)))
+        );
+    }
+    
+    if (filteredBooks.length === 0) {
+        bookListElement.innerHTML = '<div class="empty-state">No books found</div>';
+        return;
+    }
+    
+    bookListElement.innerHTML = '';
+    
+    // Sort books before rendering
+    const sortedBooks = sortBooks(filteredBooks);
+    
+    sortedBooks.forEach(book => {
+        const bookCard = createBookCard(book);
+        bookListElement.appendChild(bookCard);
+    });
+}
+
 function renderList(listName) {
     const listElement = document.getElementById(listName);
     const books = state.books[listName];
@@ -523,15 +598,19 @@ function createBookCard(book) {
 
     const description = book.description ? `<div class="book-description">${book.description.length > 150 ? book.description.substring(0, 150) + '...' : book.description}</div>` : '';
     
-    // Show rating for books in Read list
-    const ratingDisplay = (state.currentList === 'read' && book.rating) 
+    // Show rating if book has one
+    const ratingDisplay = book.rating 
         ? `<div class="book-rating">⭐ ${book.rating}/10</div>` 
         : '';
     
-    // Show tags
-    const tags = book.tags && book.tags.length > 0 
-        ? `<div class="book-tags">${book.tags.map(tag => `<span class="tag-badge">${tag}</span>`).join('')}</div>` 
+    // Show tags (filter out list status tags from display)
+    const displayTags = book.tags ? book.tags.filter(t => !['to_read', 'reading', 'read'].includes(t)) : [];
+    const tags = displayTags.length > 0 
+        ? `<div class="book-tags">${displayTags.map(tag => `<span class="tag-badge">${tag}</span>`).join('')}</div>` 
         : '';
+    
+    // Get current list status
+    const currentListTag = book.tags?.find(t => ['to_read', 'reading', 'read'].includes(t)) || 'to_read';
 
     div.innerHTML = `
         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'120\' fill=\'%232c2c2e\'%3E%3Crect width=\'80\' height=\'120\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'32\'%3E📖%3C/text%3E%3C/svg%3E'">
@@ -546,9 +625,9 @@ function createBookCard(book) {
             </div>
             <div class="book-card-actions">
                 <div class="action-group">
-                    ${getMoveButtons(state.currentList, book.id)}
+                    ${getListStatusButtons(currentListTag, book.id)}
                 </div>
-                <button class="btn btn-icon btn-danger" onclick="removeBookFromList('${book.id}', '${state.currentList}')" title="Remove">
+                <button class="btn btn-icon btn-danger" onclick="removeBook('${book.id}')" title="Remove">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -568,24 +647,24 @@ function createBookCard(book) {
     return div;
 }
 
-// Get move buttons based on current list
-function getMoveButtons(currentList, bookId) {
+// Get list status buttons based on current tag
+function getListStatusButtons(currentTag, bookId) {
     const buttons = [];
     const icons = {
-        wantToRead: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
+        to_read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
         reading: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
         read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>'
     };
     const labels = {
-        wantToRead: 'To Read',
+        to_read: 'To Read',
         reading: 'Reading',
         read: 'Read'
     };
 
     for (const [key, icon] of Object.entries(icons)) {
-        const isActive = key === currentList;
+        const isActive = key === currentTag;
         const activeClass = isActive ? ' active' : '';
-        const onclick = isActive ? '' : `onclick="moveBook('${bookId}', '${currentList}', '${key}')"`;
+        const onclick = isActive ? '' : `onclick="changeBookListStatus('${bookId}', '${key}')"`;
         buttons.push(`<button class="btn btn-icon${activeClass}" ${onclick} title="${labels[key]}" ${isActive ? 'disabled' : ''}>${icon}</button>`);
     }
 

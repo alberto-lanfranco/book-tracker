@@ -48,13 +48,11 @@ function init() {
     // Display app version
     document.getElementById('appVersion').textContent = APP_VERSION;
     
-    // Render all lists
-    renderList('wantToRead');
-    renderList('reading');
-    renderList('read');
+    // Render books view
+    renderBooks();
     
-    // Show search view by default
-    switchView('searchView');
+    // Show add view by default
+    switchView('addView');
     
     setupEventListeners();
     
@@ -287,24 +285,32 @@ function createSearchResultItem(book) {
 
 
 // Add book to list
-function addBookToList(book, listName) {
+// Add book with specific list tag (to_read, reading, read)
+function addBookToList(book, listTag) {
     // Check if book has ISBN (required for cloud sync)
     if (!book.isbn) {
         showToast('⚠️ Book has no ISBN - won\'t sync to cloud');
         // Still add to local list, but warn user
     }
     
-    // Check if book already exists in any list
-    const allBooks = [...state.books.wantToRead, ...state.books.reading, ...state.books.read];
-    if (allBooks.some(b => b.id === book.id)) {
-        // Create a simple toast notification
-        showToast('Book already in your lists');
+    // Check if book already exists
+    if (state.books.some(b => b.id === book.id)) {
+        showToast('Book already in your collection');
         return;
     }
 
-    state.books[listName].push(book);
+    // Initialize tags array and add list status tag
+    book.tags = book.tags || [];
+    if (!book.tags.includes(listTag)) {
+        book.tags.push(listTag);
+    }
+    
+    // Set addedAt timestamp
+    book.addedAt = new Date().toISOString();
+    
+    state.books.push(book);
     saveToLocalStorage();
-    renderList(listName);
+    renderBooks();
     
     // Clear search and show success
     searchResults.innerHTML = '';
@@ -343,64 +349,60 @@ function showToast(message) {
     }, 2000);
 }
 
-// Remove book from list
-function removeBookFromList(bookId, listName) {
-    state.books[listName] = state.books[listName].filter(book => book.id !== bookId);
+// Remove book completely
+function removeBook(bookId) {
+    state.books = state.books.filter(book => book.id !== bookId);
     saveToLocalStorage();
-    renderList(listName);
+    renderBooks();
 }
 
 // Move book to different list
-function moveBook(bookId, fromList, toList) {
-    const book = state.books[fromList].find(b => b.id === bookId);
+// Change book list status by updating tags
+function changeBookListStatus(bookId, newListTag) {
+    const book = state.books.find(b => b.id === bookId);
     if (book) {
-        state.books[fromList] = state.books[fromList].filter(b => b.id !== bookId);
-        // Update timestamp when moving to new list
+        // Remove old list tags
+        book.tags = book.tags.filter(t => !['to_read', 'reading', 'read'].includes(t));
+        // Add new list tag
+        book.tags.push(newListTag);
+        // Update timestamp
         book.addedAt = new Date().toISOString();
-        state.books[toList].push(book);
         saveToLocalStorage();
-        renderList(fromList);
-        renderList(toList);
-        showToast('Book moved!');
+        renderBooks();
+        showToast('Book status updated!');
     }
 }
 
 // Update book rating
 function updateBookRating(bookId, rating) {
-    const book = state.books.read.find(b => b.id === bookId);
+    const book = state.books.find(b => b.id === bookId);
     if (book) {
         book.rating = rating;
         saveToLocalStorage();
-        renderList('read');
+        renderBooks();
     }
 }
 
 // Add tag to book
 function addTagToBook(bookId, tag) {
-    for (const list of Object.values(state.books)) {
-        const book = list.find(b => b.id === bookId);
-        if (book) {
-            if (!book.tags) book.tags = [];
-            if (!book.tags.includes(tag)) {
-                book.tags.push(tag);
-                saveToLocalStorage();
-                renderList(state.currentList);
-            }
-            break;
+    const book = state.books.find(b => b.id === bookId);
+    if (book) {
+        if (!book.tags) book.tags = [];
+        if (!book.tags.includes(tag)) {
+            book.tags.push(tag);
+            saveToLocalStorage();
+            renderBooks();
         }
     }
 }
 
 // Remove tag from book
 function removeTagFromBook(bookId, tag) {
-    for (const list of Object.values(state.books)) {
-        const book = list.find(b => b.id === bookId);
-        if (book && book.tags) {
-            book.tags = book.tags.filter(t => t !== tag);
-            saveToLocalStorage();
-            renderList(state.currentList);
-            break;
-        }
+    const book = state.books.find(b => b.id === bookId);
+    if (book && book.tags) {
+        book.tags = book.tags.filter(t => t !== tag);
+        saveToLocalStorage();
+        renderBooks();
     }
 }
 
@@ -1028,10 +1030,8 @@ async function syncWithGitHub(manualSync = false) {
                 // Remote is source of truth - overwrite local
                 state.books = remoteBooks;
                 
-                // Re-render all lists
-                renderList('wantToRead');
-                renderList('reading');
-                renderList('read');
+                // Re-render books view
+                renderBooks();
                 
                 // Save to localStorage as cache
                 saveToLocalStorage();

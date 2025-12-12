@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.3.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -718,28 +718,28 @@ function showManualEntryModal() {
     const modal = document.getElementById('bookDetailModal');
     const content = document.getElementById('bookDetailContent');
     
-    const placeholderCover = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" fill="%232c2c2e"%3E%3Crect width="200" height="300"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="64"%3E📖%3C/text%3E%3C/svg%3E';
+    let selectedList = null; // Track selected list
     
     content.innerHTML = `
-        <div class="detail-cover-container">
-            <img src="${placeholderCover}" alt="Book cover" class="detail-cover" id="manualCoverPreview">
-            <input type="text" class="edit-input" id="manualCoverUrl" placeholder="Cover image URL (optional)">
-        </div>
-        <div class="detail-info">
-            <h2 style="margin-bottom: 16px;">Add Book Manually</h2>
-            <label>Title *</label>
-            <input type="text" class="edit-input edit-title" id="manualTitle" placeholder="Enter book title" required>
-            <label>Author *</label>
-            <input type="text" class="edit-input" id="manualAuthor" placeholder="Enter author name" required>
+        <div class="detail-info" style="padding-top: 0;">
+            <h2 style="margin-bottom: 24px;">Add Book Manually</h2>
+            <label>Title</label>
+            <input type="text" class="edit-input edit-title" id="manualTitle" placeholder="Enter book title">
+            <label>Author</label>
+            <input type="text" class="edit-input" id="manualAuthor" placeholder="Enter author name">
             <label>Year</label>
             <input type="text" class="edit-input" id="manualYear" placeholder="Publication year (e.g., 2020)" style="width: 150px;">
-            <label>ISBN (optional, but recommended for cloud sync)</label>
-            <input type="text" class="edit-input" id="manualIsbn" placeholder="ISBN-10 or ISBN-13">
             <label>Description</label>
             <textarea class="edit-textarea" id="manualDescription" placeholder="Book description or notes"></textarea>
-            <label>Add to list:</label>
-            <div class="detail-actions" style="margin-top: 12px;">
-                <div class="action-group">
+            <label>Cover URL</label>
+            <input type="text" class="edit-input" id="manualCoverUrl" placeholder="Cover image URL (optional)">
+            
+            <label style="margin-top: 8px;">ISBN</label>
+            <input type="text" class="edit-input" id="manualIsbn" placeholder="ISBN-10 or ISBN-13">
+            
+            <label style="margin-top: 16px;">Add to list:</label>
+            <div class="detail-actions" style="margin-top: 12px; margin-bottom: 16px;">
+                <div class="action-group" id="manualListButtons">
                     <button class="btn btn-icon" data-list="to_read" title="To Read">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -762,71 +762,80 @@ function showManualEntryModal() {
                     </button>
                 </div>
             </div>
+            
+            <button class="btn btn-primary" id="saveManualBook" style="width: 100%; padding: 14px; font-size: 17px; font-weight: 600;">
+                Save Book
+            </button>
         </div>
     `;
     
-    // Update cover preview when URL changes
-    const coverUrlInput = document.getElementById('manualCoverUrl');
-    const coverPreview = document.getElementById('manualCoverPreview');
-    coverUrlInput.addEventListener('input', (e) => {
-        const url = e.target.value.trim();
-        if (url) {
-            coverPreview.src = url;
-            coverPreview.onerror = () => {
-                coverPreview.src = placeholderCover;
-            };
-        } else {
-            coverPreview.src = placeholderCover;
-        }
+    // Add event listeners for list selection buttons (toggle active state)
+    const listButtons = content.querySelectorAll('button[data-list]');
+    listButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all buttons
+            listButtons.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            btn.classList.add('active');
+            // Store selected list
+            selectedList = btn.dataset.list;
+        });
     });
     
-    // Add event listeners for list buttons
-    content.querySelectorAll('button[data-list]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const title = document.getElementById('manualTitle').value.trim();
-            const author = document.getElementById('manualAuthor').value.trim();
-            
-            if (!title || !author) {
-                showToast('⚠️ Title and Author are required');
-                return;
-            }
-            
-            const listTag = btn.dataset.list;
-            const year = document.getElementById('manualYear').value.trim() || 'N/A';
-            const isbn = document.getElementById('manualIsbn').value.trim() || null;
-            const description = document.getElementById('manualDescription').value.trim() || null;
-            const coverUrl = document.getElementById('manualCoverUrl').value.trim() || null;
-            
-            // Create book object
-            const manualBook = {
-                id: isbn || `manual_${Date.now()}`, // Use ISBN or generate unique ID
-                title: title,
-                author: author,
-                year: year,
-                isbn: isbn,
-                description: description,
-                coverUrl: coverUrl,
-                tags: [listTag],
-                addedAt: new Date().toISOString()
-            };
-            
-            // Warn if no ISBN
-            if (!isbn) {
-                showToast('⚠️ Book added without ISBN - won\'t sync to cloud');
-            } else {
-                showToast('Book added!');
-            }
-            
-            // Add to state
-            state.books.push(manualBook);
-            saveToLocalStorage();
-            renderBooks();
-            
-            // Close modal and clear search
-            closeBookDetail();
-            searchResults.innerHTML = '';
-            searchInput.value = '';
-        });
+    // Pre-select "To Read" by default
+    listButtons[0].classList.add('active');
+    selectedList = 'to_read';
+    
+    // Add event listener for save button
+    const saveButton = document.getElementById('saveManualBook');
+    saveButton.addEventListener('click', () => {
+        const title = document.getElementById('manualTitle').value.trim();
+        const author = document.getElementById('manualAuthor').value.trim();
+        
+        if (!title || !author) {
+            showToast('⚠️ Title and Author are required');
+            return;
+        }
+        
+        if (!selectedList) {
+            showToast('⚠️ Please select a list');
+            return;
+        }
+        
+        const year = document.getElementById('manualYear').value.trim() || 'N/A';
+        const isbn = document.getElementById('manualIsbn').value.trim() || null;
+        const description = document.getElementById('manualDescription').value.trim() || null;
+        const coverUrl = document.getElementById('manualCoverUrl').value.trim() || null;
+        
+        // Create book object
+        const manualBook = {
+            id: isbn || `manual_${Date.now()}`, // Use ISBN or generate unique ID
+            title: title,
+            author: author,
+            year: year,
+            isbn: isbn,
+            description: description,
+            coverUrl: coverUrl,
+            tags: [selectedList],
+            addedAt: new Date().toISOString()
+        };
+        
+        // Warn if no ISBN
+        if (!isbn) {
+            showToast('⚠️ Book added without ISBN - won\'t sync to cloud');
+        } else {
+            showToast('Book added!');
+        }
+        
+        // Add to state
+        state.books.push(manualBook);
+        saveToLocalStorage();
+        renderBooks();
+        
+        // Close modal and clear search
+        closeBookDetail();
+        searchResults.innerHTML = '';
+        searchInput.value = '';
     });
     
     modal.classList.add('active');

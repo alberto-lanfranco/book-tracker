@@ -452,6 +452,15 @@ body {
     background: #ff6961;
 }
 
+.btn-primary {
+    background: var(--accent);
+    color: var(--text-primary);
+}
+
+.btn-primary:active {
+    background: var(--accent-hover);
+}
+
 .btn-small {
     padding: 6px 12px;
     font-size: 13px;

@@ -160,8 +160,9 @@ Body: {
   - Displayed at bottom of search results
   - Also shown when no results found
   - Opens modal for manual book entry
-  - Fields: Title*, Author*, Year, ISBN, Description, Cover URL
-  - Add to list buttons (To Read, Reading, Read)
+  - Fields: Title, Author, Year, Description, Cover URL, ISBN
+  - Add to list buttons (To Read, Reading, Read) - select before saving
+  - "Save Book" button at bottom to commit entry
   - Books without ISBN won't sync to cloud (warning shown)
 
 ### 2. Book Lists
@@ -398,19 +399,22 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 1. Click "Add manually" button (bottom of search results or when no results)
 2. `showManualEntryModal()` opens modal with entry form
 3. Fill in fields:
-   - Title* (required)
-   - Author* (required)
+   - Title (required)
+   - Author (required)
    - Year (optional)
-   - ISBN (optional but recommended for cloud sync)
    - Description (optional)
-   - Cover URL (optional, with live preview)
-4. Click one of three list buttons (To Read, Reading, Read)
-5. Validates required fields
-6. Creates book object with `id: isbn || 'manual_${timestamp}'`
-7. Adds to state.books array
-8. Saves to localStorage (triggers cloud sync if ISBN present)
-9. Shows toast notification with ISBN warning if no ISBN
-10. Closes modal and clears search
+   - Cover URL (optional)
+   - ISBN (optional but recommended for cloud sync)
+4. Select one of three list buttons (To Read, Reading, Read)
+   - Buttons toggle active state on click
+   - "To Read" is pre-selected by default
+5. Click "Save Book" button at bottom
+6. Validates required fields (title, author, list selection)
+7. Creates book object with `id: isbn || 'manual_${timestamp}'`
+8. Adds to state.books array
+9. Saves to localStorage (triggers cloud sync if ISBN present)
+10. Shows toast notification with ISBN warning if no ISBN
+11. Closes modal and clears search
 
 ### Changing Book List Status
 1. Click non-active list icon
@@ -537,7 +541,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.3.0
+- **Current Version**: 2.3.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -553,6 +557,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.3.1** (2025-12-12): Improved manual entry UX - removed cover preview from top, removed asterisks, reordered fields, added dedicated "Save Book" button, list buttons now toggle instead of immediate save
 - **2.3.0** (2025-12-12): Added manual book entry feature with dedicated modal, manual entry button at bottom of search results
 - **2.2.0** (2025-12-12): Denormalized TSV structure with all book metadata fields (title, author, year, description, coverUrl), added book metadata editing UI, automatic column handling for backward compatibility, smart API fallback for any missing fields
 

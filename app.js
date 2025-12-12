@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.8.2';
+const APP_VERSION = '2.9.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -489,47 +489,11 @@ function createSearchResultItem(book) {
             <div class="book-author">${book.author}</div>
             <div class="book-year">${book.year}</div>
         </div>
-        <div class="search-result-actions">
-            <button class="btn btn-icon ${currentListTag === 'to_read' ? 'active' : ''}" data-tag="to_read" title="To Read">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                </svg>
-            </button>
-            <button class="btn btn-icon ${currentListTag === 'reading' ? 'active' : ''}" data-tag="reading" title="Reading">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-            </button>
-            <button class="btn btn-icon ${currentListTag === 'read' ? 'active' : ''}" data-tag="read" title="Read">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-            </button>
-        </div>
     `;
 
-    // Add click handlers to action buttons
-    div.querySelectorAll('.search-result-actions button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const listTag = btn.dataset.tag;
-            
-            // If book exists, change its list status instead of adding
-            if (existingBook) {
-                changeBookListStatus(existingBook.id, listTag);
-            } else {
-                addBookToList(book, listTag);
-            }
-        });
-    });
-
     // Add click handler to open detail view
-    div.addEventListener('click', (e) => {
-        if (!e.target.closest('button')) {
-            showBookDetail(book, 'search');
-        }
+    div.addEventListener('click', () => {
+        showBookDetail(book, 'search');
     });
 
     return div;
@@ -1110,23 +1074,32 @@ function showBookDetail(book, source = 'list', editMode = false) {
     if (source === 'search') {
         listActions = `
             <div class="detail-actions">
-                <button class="btn btn-icon" data-tag="to_read" data-book-id="${book.id}" title="To Read">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                    </svg>
-                </button>
-                <button class="btn btn-icon" data-tag="reading" data-book-id="${book.id}" title="Reading">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                </button>
-                <button class="btn btn-icon" data-tag="read" data-book-id="${book.id}" title="Read">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                </button>
+                <div class="action-button-with-label">
+                    <button class="btn btn-icon" data-tag="to_read" data-book-id="${book.id}" title="To Read">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                    </button>
+                    <span class="button-label">To Read</span>
+                </div>
+                <div class="action-button-with-label">
+                    <button class="btn btn-icon" data-tag="reading" data-book-id="${book.id}" title="Reading">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                    </button>
+                    <span class="button-label">Reading</span>
+                </div>
+                <div class="action-button-with-label">
+                    <button class="btn btn-icon" data-tag="read" data-book-id="${book.id}" title="Read">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </button>
+                    <span class="button-label">Read</span>
+                </div>
             </div>
         `;
     } else {

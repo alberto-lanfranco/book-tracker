@@ -154,10 +154,7 @@ Body: {
 - Each result shows:
   - Cover image (60x90px)
   - Title, author, year
-  - Three list action buttons (icons)
-  - Icons highlight if book exists in database (shows current list status)
-- Tap result to open detail modal
-- Tap icon to add directly to list (or change list status if book already exists)
+- Tap result to open detail modal with list action buttons
 - **Manual Entry Button**:
   - Displayed at bottom of search results
   - Also shown when no results found
@@ -212,7 +209,7 @@ Body: {
   - Remove tags by clicking × button
   - Tags displayed as pills with remove button
 - **Rating input** (10 tappable stars) - shown only for books with Read tag
-- **From search**: Shows 3 list buttons to add book
+- **From search**: Shows 3 list buttons with labels (To Read, Reading, Read) to add book
 - **From list**: Shows 3 list buttons (current highlighted) + delete button + edit button
 - Click outside or X button to close
 
@@ -561,7 +558,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.8.2
+- **Current Version**: 2.9.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -575,8 +572,14 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Update both `APP_VERSION` in `app.js` and `CACHE_VERSION` in `sw.js`
 - Keep versions synchronized between app and service worker
 - Document version changes in commit messages
+- **Always update agents.md** when making changes:
+  - Update relevant sections to reflect new features, behavior changes, or bug fixes
+  - Add new sections if introducing new functionality
+  - Keep code examples, flows, and architecture descriptions accurate
+  - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **2.9.0** (2025-12-12): Simplified search results in Add tab - removed list action icons from results, added labels below buttons in detail modal when viewing from search
 - **2.8.2** (2025-12-12): Removed grey background from filter section in Books tab for cleaner appearance
 - **2.8.1** (2025-12-12): Fixed vertical alignment of clear button in Books tab search field
 - **2.8.0** (2025-12-12): Added clear buttons (X) to both search fields - appears when text is present, clears input and refocuses on tap

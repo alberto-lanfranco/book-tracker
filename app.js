@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.6.2';
+const APP_VERSION = '2.7.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -190,7 +190,7 @@ function setupEventListeners() {
             clearTimeout(searchTimeout);
             const query = searchInput.value.trim();
             if (query.length > 2) {
-                searchTimeout = setTimeout(() => handleSearch(), 500);
+                searchTimeout = setTimeout(() => handleSearch(), 1000);
             } else if (query.length === 0) {
                 searchResults.innerHTML = '';
             }
@@ -438,6 +438,10 @@ function createSearchResultItem(book) {
         ? book.coverUrl.replace('http://', 'https://')
         : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="90" fill="%232c2c2e"%3E%3Crect width="60" height="90"/%3E%3Crect width="60" height="90"/%3E%3Ctext x="50%25" y="50%25" fill="%238e8e93" text-anchor="middle" dy=".3em" font-size="24"%3E📖%3C/text%3E%3C/svg%3E';
 
+    // Check if book exists in database
+    const existingBook = state.books.find(b => b.id === book.id);
+    const currentListTag = existingBook ? existingBook.tags.find(t => ['to_read', 'reading', 'read'].includes(t)) : null;
+
     div.innerHTML = `
         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'60\\' height=\\'90\\' fill=\\'%232c2c2e\\'%3E%3Crect width=\\'60\\' height=\\'90\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' fill=\\'%238e8e93\\' text-anchor=\\'middle\\' dy=\\'.3em\\' font-size=\\'24\\'%3E📖%3C/text%3E%3C/svg%3E'">
         <div class="book-info">
@@ -446,19 +450,19 @@ function createSearchResultItem(book) {
             <div class="book-year">${book.year}</div>
         </div>
         <div class="search-result-actions">
-            <button class="btn btn-icon" data-tag="to_read" title="To Read">
+            <button class="btn btn-icon ${currentListTag === 'to_read' ? 'active' : ''}" data-tag="to_read" title="To Read">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
             </button>
-            <button class="btn btn-icon" data-tag="reading" title="Reading">
+            <button class="btn btn-icon ${currentListTag === 'reading' ? 'active' : ''}" data-tag="reading" title="Reading">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                 </svg>
             </button>
-            <button class="btn btn-icon" data-tag="read" title="Read">
+            <button class="btn btn-icon ${currentListTag === 'read' ? 'active' : ''}" data-tag="read" title="Read">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
@@ -471,7 +475,13 @@ function createSearchResultItem(book) {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const listTag = btn.dataset.tag;
-            addBookToList(book, listTag);
+            
+            // If book exists, change its list status instead of adding
+            if (existingBook) {
+                changeBookListStatus(existingBook.id, listTag);
+            } else {
+                addBookToList(book, listTag);
+            }
         });
     });
 
@@ -775,8 +785,6 @@ function createBookCard(book) {
     const coverUrl = book.coverUrl 
         ? book.coverUrl.replace('http://', 'https://')
         : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="120" fill="%232c2c2e"%3E%3Crect width="80" height="120"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="32"%3E📖%3C/text%3E%3C/svg%3E';
-
-    const description = book.description ? `<div class="book-description">${book.description.length > 150 ? book.description.substring(0, 150) + '...' : book.description}</div>` : '';
     
     // Show rating if book has one (extract from tags)
     const rating = getRatingFromTags(book.tags);
@@ -805,7 +813,6 @@ function createBookCard(book) {
                 <div class="book-year">${book.year}</div>
                 ${ratingDisplay}
                 ${tags}
-                ${description}
             </div>
             <div class="book-card-actions">
                 <div class="action-group">

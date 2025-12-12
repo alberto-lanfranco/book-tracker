@@ -147,15 +147,16 @@ Body: {
 ## Key Features
 
 ### 1. Search
-- Auto-search with 500ms debounce on input
+- Auto-search with 1000ms debounce on input
 - Search on Enter key
 - 20 results displayed
 - Each result shows:
   - Cover image (60x90px)
   - Title, author, year
   - Three list action buttons (icons)
+  - Icons highlight if book exists in database (shows current list status)
 - Tap result to open detail modal
-- Tap icon to add directly to list
+- Tap icon to add directly to list (or change list status if book already exists)
 - **Manual Entry Button**:
   - Displayed at bottom of search results
   - Also shown when no results found
@@ -184,7 +185,6 @@ Body: {
   - Title, author, year
   - Rating (⭐ X/10) - displayed only for books with Read tag
   - Tags (colored badges) - list status tags hidden from display
-  - Description (truncated to 150 chars)
   - Three list status icons (current one highlighted/active)
   - Delete button (far right)
 - Tap card to open detail modal
@@ -559,7 +559,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.6.2
+- **Current Version**: 2.7.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -575,6 +575,10 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.7.1** (2025-12-12): Removed book description from book cards in Books view - descriptions now only shown in full-page detail modal
+- **2.7.0** (2025-12-12): Search results now highlight list status icons if book already exists in database, clicking icon changes list status instead of re-adding
+- **2.6.4** (2025-12-12): Increased Google Books API search debounce from 500ms to 1000ms to reduce unnecessary API calls
+- **2.6.3** (2025-12-12): Disabled zoom in PWA by adding maximum-scale=1.0 and user-scalable=no to viewport meta tag
 - **2.6.2** (2025-12-12): Added confirmation dialog before deleting books - shows book title and "cannot be undone" warning
 - **2.6.1** (2025-12-12): Fixed combined tag filtering - changed from .some() to .every() so books must match ALL selected tags
 - **2.6.0** (2025-12-12): Enhanced tag filter system - dynamic manual tags with orange accent, removed "All" filter, multi-group filtering (list + manual), toggle deselection, vertical separator, alphabetical sorting

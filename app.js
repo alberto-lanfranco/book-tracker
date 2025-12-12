@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.7.2';
+const APP_VERSION = '2.8.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -185,10 +185,18 @@ function init() {
 function setupEventListeners() {
     // Search on input
     if (searchInput) {
+        const clearSearchBtn = document.getElementById('clearSearchInput');
         let searchTimeout;
+        
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
             const query = searchInput.value.trim();
+            
+            // Toggle clear button visibility
+            if (clearSearchBtn) {
+                clearSearchBtn.classList.toggle('visible', searchInput.value.length > 0);
+            }
+            
             if (query.length > 2) {
                 searchTimeout = setTimeout(() => handleSearch(), 1000);
             } else if (query.length === 0) {
@@ -202,6 +210,16 @@ function setupEventListeners() {
                 handleSearch();
             }
         });
+        
+        // Clear search button
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                clearSearchBtn.classList.remove('visible');
+                searchInput.focus();
+            });
+        }
     }
 
     // Bottom navigation
@@ -255,14 +273,33 @@ function setupEventListeners() {
     // Search saved books (Books view)
     const bookSearchInput = document.getElementById('bookSearch');
     if (bookSearchInput) {
+        const clearBookSearchBtn = document.getElementById('clearBookSearch');
         let bookSearchTimeout;
+        
         bookSearchInput.addEventListener('input', () => {
             clearTimeout(bookSearchTimeout);
+            
+            // Toggle clear button visibility
+            if (clearBookSearchBtn) {
+                clearBookSearchBtn.classList.toggle('visible', bookSearchInput.value.length > 0);
+            }
+            
             bookSearchTimeout = setTimeout(() => {
                 state.searchQuery = bookSearchInput.value.trim().toLowerCase();
                 renderBooks();
             }, 300);
         });
+        
+        // Clear book search button
+        if (clearBookSearchBtn) {
+            clearBookSearchBtn.addEventListener('click', () => {
+                bookSearchInput.value = '';
+                state.searchQuery = '';
+                renderBooks();
+                clearBookSearchBtn.classList.remove('visible');
+                bookSearchInput.focus();
+            });
+        }
     }
 
     // Tag filter buttons (Books view) - delegated event handling

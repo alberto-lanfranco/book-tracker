@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.6.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -265,26 +265,49 @@ function setupEventListeners() {
         });
     }
 
-    // Tag filter buttons (Books view)
-    const tagFilterButtons = document.querySelectorAll('.tag-filter');
-    tagFilterButtons.forEach(button => {
-        button.addEventListener('click', () => {
+    // Tag filter buttons (Books view) - delegated event handling
+    const tagFiltersContainer = document.getElementById('tagFilters');
+    if (tagFiltersContainer) {
+        tagFiltersContainer.addEventListener('click', (e) => {
+            const button = e.target.closest('.tag-filter');
+            if (!button) return;
+            
             const filterTag = button.dataset.tag;
+            const isListTag = ['to_read', 'reading', 'read'].includes(filterTag);
             
-            // Toggle active state
-            tagFilterButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            // Update filter state
-            if (filterTag === 'all') {
-                state.filterTags = [];
+            // Toggle selection
+            if (button.classList.contains('active')) {
+                // Deselect if already selected
+                button.classList.remove('active');
+                state.filterTags = state.filterTags.filter(t => t !== filterTag);
             } else {
-                state.filterTags = [filterTag];
+                // Select this tag
+                if (isListTag) {
+                    // Deselect other list tags
+                    tagFiltersContainer.querySelectorAll('.tag-filter').forEach(btn => {
+                        const btnTag = btn.dataset.tag;
+                        if (['to_read', 'reading', 'read'].includes(btnTag)) {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    // Remove other list tags from filterTags
+                    state.filterTags = state.filterTags.filter(t => !['to_read', 'reading', 'read'].includes(t));
+                } else {
+                    // Deselect other manual tags
+                    tagFiltersContainer.querySelectorAll('.tag-filter.manual-tag').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    // Remove other manual tags from filterTags
+                    const listTags = ['to_read', 'reading', 'read'];
+                    state.filterTags = state.filterTags.filter(t => listTags.includes(t));
+                }
+                button.classList.add('active');
+                state.filterTags.push(filterTag);
             }
             
             renderBooks();
         });
-    });
+    }
     
     // Sort handlers
     const sortBySelect = document.getElementById('sortBy');
@@ -649,11 +672,56 @@ function sortBooks(books) {
     return sorted;
 }
 
+// Render tag filters
+function renderTagFilters() {
+    const tagFiltersContainer = document.getElementById('tagFilters');
+    if (!tagFiltersContainer) return;
+    
+    // Get all unique manual tags (excluding list status tags and rating tags)
+    const listStatusTags = ['to_read', 'reading', 'read'];
+    const manualTags = new Set();
+    
+    state.books.forEach(book => {
+        if (book.tags) {
+            book.tags.forEach(tag => {
+                // Exclude list status tags and rating tags (01_stars to 10_stars)
+                if (!listStatusTags.includes(tag) && !tag.match(/^\d{2}_stars$/)) {
+                    manualTags.add(tag);
+                }
+            });
+        }
+    });
+    
+    // Sort manual tags alphabetically
+    const sortedManualTags = Array.from(manualTags).sort();
+    
+    // Build HTML
+    let html = '';
+    
+    // List status tags (always shown first)
+    html += `<button class="tag-filter ${state.filterTags.includes('to_read') ? 'active' : ''}" data-tag="to_read">To Read</button>`;
+    html += `<button class="tag-filter ${state.filterTags.includes('reading') ? 'active' : ''}" data-tag="reading">Reading</button>`;
+    html += `<button class="tag-filter ${state.filterTags.includes('read') ? 'active' : ''}" data-tag="read">Read</button>`;
+    
+    // Separator and manual tags
+    if (sortedManualTags.length > 0) {
+        html += `<span class="tag-separator">|</span>`;
+        sortedManualTags.forEach(tag => {
+            html += `<button class="tag-filter manual-tag ${state.filterTags.includes(tag) ? 'active' : ''}" data-tag="${tag}">${tag}</button>`;
+        });
+    }
+    
+    tagFiltersContainer.innerHTML = html;
+}
+
 // Render specific list
 // Render books view with filtering
 function renderBooks() {
     const bookListElement = document.getElementById('bookList');
     if (!bookListElement) return; // Not on books view
+    
+    // Render tag filters
+    renderTagFilters();
     
     // Apply filters
     let filteredBooks = state.books;

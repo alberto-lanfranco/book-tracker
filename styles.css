@@ -347,6 +347,24 @@ body {
     color: #ffffff;
 }
 
+.tag-separator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+.tag-filter.manual-tag {
+    background: var(--bg-tertiary);
+}
+
+.tag-filter.manual-tag.active {
+    background: #ff9500;
+    color: #ffffff;
+}
+
 .book-list {
     display: block;
     min-height: 100%;

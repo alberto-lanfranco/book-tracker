@@ -18,7 +18,7 @@
 }
 
 body {
-    font-family: monospace;
+    font-family: monospace !important;
     background: var(--bg-primary);
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
@@ -26,6 +26,10 @@ body {
     overflow-x: hidden;
     line-height: 1.4;
     overscroll-behavior: none;
+}
+
+* {
+    font-family: inherit !important;
 }
 
 .app {

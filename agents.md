@@ -329,7 +329,8 @@ addedAt	isbn	tags	title	author	year	coverUrl	description
 - **Toast notifications** (brief messages):
   - Success: "Book added!", "Book moved!"
   - Error: Duplicate book warnings
-  - 2-second display with fade-out animation
+  - 4-second display with fade-out animation
+  - Positioned in safe area (respects iPhone notch)
 - **Status messages** (sync/maintenance):
   - Displayed in Settings view
   - Include dismiss button (×)
@@ -571,7 +572,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.11.0
+- **Current Version**: 2.11.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -592,6 +593,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **2.11.1** (2025-12-12): Fixed modal closing bug, moved toast notifications to safe area (above notch), increased toast duration to 4 seconds
 - **2.11.0** (2025-12-12): Fixed search detail modal - buttons now show active state for existing books, clicking buttons adds/changes list without closing modal
 - **2.10.0** (2025-12-12): Reduced button label spacing, added dismiss buttons to all alerts/banners (no auto-hide)
 - **2.9.0** (2025-12-12): Simplified search results in Add tab - removed list action icons from results, added labels below buttons in detail modal when viewing from search

@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.11.0';
+const APP_VERSION = '2.11.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -391,8 +391,8 @@ function setupEventListeners() {
                 // Book exists, change list status
                 changeBookListStatus(existingBook.id, listTag);
             } else {
-                // New book, add to list
-                addBookToList(currentDetailBook, listTag);
+                // New book, add to list (keepSearchOpen = true to prevent clearing search)
+                addBookToList(currentDetailBook, listTag, true);
             }
             
             // Update button states without closing modal
@@ -543,7 +543,7 @@ function createSearchResultItem(book) {
 
 // Add book to list
 // Add book with specific list tag (to_read, reading, read)
-function addBookToList(book, listTag) {
+function addBookToList(book, listTag, keepSearchOpen = false) {
     // Check if book has ISBN (required for cloud sync)
     if (!book.isbn) {
         showToast('⚠️ Book has no ISBN - won\'t sync to cloud');
@@ -569,9 +569,11 @@ function addBookToList(book, listTag) {
     saveToLocalStorage();
     renderBooks();
     
-    // Clear search and show success
-    searchResults.innerHTML = '';
-    searchInput.value = '';
+    // Clear search and show success (unless keepSearchOpen is true)
+    if (!keepSearchOpen) {
+        searchResults.innerHTML = '';
+        searchInput.value = '';
+    }
     if (book.isbn) {
         showToast('Book added!');
     }
@@ -583,7 +585,7 @@ function showToast(message) {
     toast.textContent = message;
     toast.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: max(20px, env(safe-area-inset-top, 20px));
         left: 50%;
         transform: translateX(-50%);
         background: rgba(44, 44, 46, 0.95);
@@ -603,7 +605,7 @@ function showToast(message) {
         toast.style.transform = 'translateX(-50%) translateY(-10px)';
         toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-    }, 2000);
+    }, 4000);
 }
 
 // Remove book completely
@@ -1260,21 +1262,8 @@ function showBookDetail(book, source = 'list', editMode = false) {
             } else if (btn.dataset.action === 'cancel-edit') {
                 // Cancel edit button
                 showBookDetail(book, source, false);
-            } else if (btn.dataset.tag && !editMode) {
-                // List status buttons (only when not in edit mode)
-                const newTag = btn.dataset.tag;
-                if (source === 'search') {
-                    addBookToList(book, newTag);
-                    closeBookDetail();
-                } else {
-                    // Change book list status
-                    const currentTag = book.tags.find(tag => ['to_read', 'reading', 'read'].includes(tag));
-                    if (newTag !== currentTag) {
-                        changeBookListStatus(book.id, newTag);
-                        closeBookDetail();
-                    }
-                }
             }
+            // Note: List status buttons are handled by event delegation in setupEventListeners()
         });
     });
 

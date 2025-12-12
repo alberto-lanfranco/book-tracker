@@ -1165,3 +1165,75 @@ body.keyboard-open .bottom-nav {
         height: 20px;
     }
 }
+
+/* Update Banner */
+.update-banner {
+    position: fixed;
+    top: -100px;
+    left: 0;
+    right: 0;
+    background: var(--accent);
+    color: var(--text-primary);
+    z-index: 10000;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.update-banner.show {
+    transform: translateY(100px);
+}
+
+.update-banner-content {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    padding-top: max(16px, env(safe-area-inset-top));
+}
+
+.update-banner-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.update-banner-text strong {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.update-banner-text span {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.update-banner .btn {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+}
+
+.update-banner .btn:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 480px) {
+    .update-banner-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .update-banner .btn {
+        width: 100%;
+    }
+}

@@ -455,8 +455,15 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 ### Service Worker
 - Cache-first strategy
 - Caches: HTML, CSS, JS, manifest, icons
-- Cache name: `book-tracker-v1`
+- Cache name: `book-tracker-v{VERSION}`
 - Update: Increment version number in sw.js
+- **Auto-update detection**:
+  - Checks for updates every 60 seconds
+  - Listens for 'updatefound' event
+  - Shows banner when new version downloaded
+  - Banner: "🎉 Update Available! A new version has been downloaded."
+  - "Restart App" button to activate update
+  - Automatic reload on controller change
 
 ## Error Handling
 
@@ -543,7 +550,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.4.0
+- **Current Version**: 2.4.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -559,6 +566,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.4.1** (2025-12-12): Improved app update detection with automatic update banner, better user messaging, automatic update checks every 60 seconds
 - **2.4.0** (2025-12-12): Enforced TSV column order (addedAt, isbn, tags, title, author, year, coverUrl, description), automatic column reordering on sync if wrong order detected
 - **2.3.1** (2025-12-12): Improved manual entry UX - removed cover preview from top, removed asterisks, reordered fields, added dedicated "Save Book" button, list buttons now toggle instead of immediate save
 - **2.3.0** (2025-12-12): Added manual book entry feature with dedicated modal, manual entry button at bottom of search results

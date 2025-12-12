@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.4.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -21,11 +21,39 @@ function setRatingTag(tags, rating) {
     return tagsWithoutRating;
 }
 
-// Register service worker
+// Register service worker with update detection
 if ('serviceWorker' in navigator) {
+    let refreshing = false;
+    
+    // Detect controller change and reload page
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+    
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Service Worker registered'))
+            .then(reg => {
+                console.log('Service Worker registered');
+                
+                // Check for updates every 60 seconds
+                setInterval(() => {
+                    reg.update();
+                }, 60000);
+                
+                // Listen for updates
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New service worker installed and old one still controlling
+                            showUpdateNotification(reg);
+                        }
+                    });
+                });
+            })
             .catch(err => console.log('Service Worker registration failed', err));
     });
 }
@@ -1595,7 +1623,40 @@ function clearLocalCache() {
     }
 }
 
-// Update PWA
+// Show update notification banner
+function showUpdateNotification(registration) {
+    // Create update banner if it doesn't exist
+    let banner = document.getElementById('updateBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'updateBanner';
+        banner.className = 'update-banner';
+        banner.innerHTML = `
+            <div class="update-banner-content">
+                <div class="update-banner-text">
+                    <strong>🎉 Update Available!</strong>
+                    <span>A new version of the app has been downloaded.</span>
+                </div>
+                <button class="btn btn-primary" id="updateNowBtn">Restart App</button>
+            </div>
+        `;
+        document.body.appendChild(banner);
+        
+        // Add click handler to restart button
+        document.getElementById('updateNowBtn').addEventListener('click', () => {
+            if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+        });
+        
+        // Show banner with animation
+        setTimeout(() => {
+            banner.classList.add('show');
+        }, 100);
+    }
+}
+
+// Update PWA (manual check from settings)
 function updatePWA() {
     if ('serviceWorker' in navigator) {
         showMaintenanceStatus('Checking for updates...', 'info');
@@ -1605,12 +1666,8 @@ function updatePWA() {
                 registration.update().then(() => {
                     // Check if there's a waiting service worker
                     if (registration.waiting) {
-                        // Tell the waiting service worker to skip waiting
-                        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                        showMaintenanceStatus('Update available! Reloading app...', 'success');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
+                        showMaintenanceStatus('Update available! Click "Restart App" banner to update.', 'success');
+                        showUpdateNotification(registration);
                     } else {
                         showMaintenanceStatus('App is up to date!', 'success');
                     }

@@ -174,38 +174,6 @@ body {
     flex-shrink: 0;
 }
 
-.search-result-status {
-    margin-left: auto;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-}
-
-.status-indicator {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-tertiary);
-}
-
-.status-indicator.to_read {
-    background: rgba(10, 132, 255, 0.15);
-    color: var(--accent);
-}
-
-.status-indicator.reading {
-    background: rgba(255, 159, 10, 0.15);
-    color: #ff9f0a;
-}
-
-.status-indicator.read {
-    background: rgba(52, 199, 89, 0.15);
-    color: #34c759;
-}
-
 .book-cover {
     width: 60px;
     height: 90px;

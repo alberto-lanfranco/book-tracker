@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '2.11.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -135,6 +135,9 @@ let syncStatus;
 let clearCacheBtn;
 let updatePWABtn;
 let maintenanceStatus;
+
+// Current book being viewed in detail modal
+let currentDetailBook = null;
 
 // Initialize app
 function init() {
@@ -366,6 +369,43 @@ function setupEventListeners() {
             renderBooks();
         });
     }
+    
+    // Detail modal button handler (delegated)
+    const bookDetailContent = document.getElementById('bookDetailContent');
+    if (bookDetailContent) {
+        bookDetailContent.addEventListener('click', (e) => {
+            const button = e.target.closest('button[data-action="add-to-list"]');
+            if (!button) return;
+            
+            const listTag = button.dataset.tag;
+            
+            if (!currentDetailBook) return;
+            
+            // Check if book exists in database
+            const existingBook = state.books.find(b => 
+                b.id === currentDetailBook.id || 
+                (currentDetailBook.isbn && (b.id === currentDetailBook.isbn || b.isbn === currentDetailBook.isbn))
+            );
+            
+            if (existingBook) {
+                // Book exists, change list status
+                changeBookListStatus(existingBook.id, listTag);
+            } else {
+                // New book, add to list
+                addBookToList(currentDetailBook, listTag);
+            }
+            
+            // Update button states without closing modal
+            const allButtons = bookDetailContent.querySelectorAll('button[data-action="add-to-list"]');
+            allButtons.forEach(btn => {
+                if (btn.dataset.tag === listTag) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        });
+    }
 }
 
 // Search books via Google Books API
@@ -488,15 +528,6 @@ function createSearchResultItem(book) {
             <div class="book-title">${book.title}</div>
             <div class="book-author">${book.author}</div>
             <div class="book-year">${book.year}</div>
-        </div>
-        <div class="search-result-status">
-            ${currentListTag ? `
-                <div class="status-indicator ${currentListTag}">
-                    ${currentListTag === 'to_read' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>' : ''}
-                    ${currentListTag === 'reading' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>' : ''}
-                    ${currentListTag === 'read' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
-                </div>
-            ` : ''}
         </div>
     `;
 
@@ -1023,6 +1054,9 @@ function showManualEntryModal() {
 function showBookDetail(book, source = 'list', editMode = false) {
     const modal = document.getElementById('bookDetailModal');
     const content = document.getElementById('bookDetailContent');
+    
+    // Store current book for event handlers
+    currentDetailBook = book;
 
     const coverUrl = book.coverUrl 
         ? book.coverUrl.replace('http://', 'https://')
@@ -1081,10 +1115,17 @@ function showBookDetail(book, source = 'list', editMode = false) {
     // Show list action buttons
     let listActions = '';
     if (source === 'search') {
+        // Check if book exists in database to highlight current list
+        const existingBook = state.books.find(b => 
+            b.id === book.id || 
+            (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
+        );
+        const currentListTag = existingBook ? existingBook.tags.find(t => ['to_read', 'reading', 'read'].includes(t)) : null;
+        
         listActions = `
             <div class="detail-actions">
                 <div class="action-button-with-label">
-                    <button class="btn btn-icon" data-tag="to_read" data-book-id="${book.id}" title="To Read">
+                    <button class="btn btn-icon ${currentListTag === 'to_read' ? 'active' : ''}" data-action="add-to-list" data-tag="to_read" data-book-id="${book.id}" title="To Read">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
@@ -1093,7 +1134,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
                     <span class="button-label">To Read</span>
                 </div>
                 <div class="action-button-with-label">
-                    <button class="btn btn-icon" data-tag="reading" data-book-id="${book.id}" title="Reading">
+                    <button class="btn btn-icon ${currentListTag === 'reading' ? 'active' : ''}" data-action="add-to-list" data-tag="reading" data-book-id="${book.id}" title="Reading">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
@@ -1102,7 +1143,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
                     <span class="button-label">Reading</span>
                 </div>
                 <div class="action-button-with-label">
-                    <button class="btn btn-icon" data-tag="read" data-book-id="${book.id}" title="Read">
+                    <button class="btn btn-icon ${currentListTag === 'read' ? 'active' : ''}" data-action="add-to-list" data-tag="read" data-book-id="${book.id}" title="Read">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>

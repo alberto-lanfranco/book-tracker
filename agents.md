@@ -154,8 +154,11 @@ Body: {
 - Each result shows:
   - Cover image (60x90px)
   - Title, author, year
-  - Status indicator (colored circular badge with icon) if book exists in a list
-- Tap result to open detail modal with list action buttons
+- Tap result to open detail modal:
+  - Shows 3 list buttons with labels (To Read, Reading, Read)
+  - Buttons highlight if book already exists in a list
+  - Clicking button adds book or changes list status
+  - Modal stays open after clicking (doesn't auto-close)
 - **Manual Entry Button**:
   - Displayed at bottom of search results
   - Also shown when no results found
@@ -568,7 +571,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.10.0
+- **Current Version**: 2.11.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -589,7 +592,8 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
-- **2.10.0** (2025-12-12): Added status indicators to search results showing current list placement, reduced button label spacing, added dismiss buttons to all alerts/banners (no auto-hide)
+- **2.11.0** (2025-12-12): Fixed search detail modal - buttons now show active state for existing books, clicking buttons adds/changes list without closing modal
+- **2.10.0** (2025-12-12): Reduced button label spacing, added dismiss buttons to all alerts/banners (no auto-hide)
 - **2.9.0** (2025-12-12): Simplified search results in Add tab - removed list action icons from results, added labels below buttons in detail modal when viewing from search
 - **2.8.2** (2025-12-12): Removed grey background from filter section in Books tab for cleaner appearance
 - **2.8.1** (2025-12-12): Fixed vertical alignment of clear button in Books tab search field

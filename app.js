@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.6.1';
+const APP_VERSION = '2.6.2';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -554,6 +554,13 @@ function showToast(message) {
 
 // Remove book completely
 function removeBook(bookId) {
+    const book = state.books.find(b => b.id === bookId);
+    if (!book) return;
+    
+    // Show confirmation dialog
+    const confirmDelete = confirm(`Delete "${book.title}"?\n\nThis action cannot be undone.`);
+    if (!confirmDelete) return;
+    
     state.books = state.books.filter(book => book.id !== bookId);
     saveToLocalStorage();
     renderBooks();

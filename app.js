@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.3.1';
+const APP_VERSION = '2.4.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -1119,8 +1119,9 @@ function closeBookDetail() {
 
 // Convert books to TSV format (denormalized: all fields stored)
 // Tags now include list status (to_read, reading, read)
+// Column order: addedAt, isbn, tags, title, author, year, coverUrl, description
 function booksToTSV() {
-    const lines = ['isbn\ttitle\tauthor\tyear\tdescription\tcoverUrl\ttags\taddedAt'];
+    const lines = ['addedAt\tisbn\ttags\ttitle\tauthor\tyear\tcoverUrl\tdescription'];
     
     state.books.forEach(book => {
         // Only sync books that have ISBN
@@ -1132,14 +1133,14 @@ function booksToTSV() {
                 return String(str).replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '');
             };
             const row = [
+                book.addedAt || '',
                 book.isbn || '',
+                tags,
                 escapeField(book.title),
                 escapeField(book.author),
                 book.year || '',
-                escapeField(book.description),
                 book.coverUrl || '',
-                tags,
-                book.addedAt || ''
+                escapeField(book.description)
             ];
             lines.push(row.join('\t'));
         }
@@ -1149,7 +1150,7 @@ function booksToTSV() {
 }
 
 // Parse TSV to books (use TSV data first, fallback to API if fields missing)
-// New format: isbn, title, author, year, description, coverUrl, tags, addedAt
+// Expected column order: addedAt, isbn, tags, title, author, year, coverUrl, description
 async function tsvToBooks(tsv) {
     const lines = tsv.trim().split('\n');
     if (lines.length < 1) return [];
@@ -1163,8 +1164,12 @@ async function tsvToBooks(tsv) {
         columnMap[col.trim()] = idx;
     });
     
-    // Expected columns with defaults
-    const expectedColumns = ['isbn', 'title', 'author', 'year', 'description', 'coverUrl', 'tags', 'addedAt'];
+    // Expected column order (enforced)
+    const expectedColumnOrder = ['addedAt', 'isbn', 'tags', 'title', 'author', 'year', 'coverUrl', 'description'];
+    
+    // Check if columns are in wrong order
+    const actualOrder = header.map(col => col.trim());
+    const isWrongOrder = !expectedColumnOrder.every((col, idx) => actualOrder[idx] === col);
     
     // Skip header line and parse book data
     const fetchPromises = [];
@@ -1276,11 +1281,16 @@ async function tsvToBooks(tsv) {
     // Wait for all API calls to complete
     await Promise.all(fetchPromises);
     
-    // Check if any books need TSV update
-    const needsUpdate = books.some(b => b._needsUpdate);
+    // Check if any books need TSV update or if column order is wrong
+    const needsUpdate = books.some(b => b._needsUpdate) || isWrongOrder;
     books.forEach(b => delete b._needsUpdate);
     
-    return books;
+    // Store flag to indicate TSV needs reordering
+    if (isWrongOrder) {
+        console.log('TSV columns in wrong order - will be fixed on next sync');
+    }
+    
+    return { books, needsReorder: isWrongOrder };
 }
 
 // Fetch paste from PasteMyst
@@ -1422,19 +1432,28 @@ async function syncWithGitHub(manualSync = false) {
             
             if (gist.files && gist.files['books.tsv']) {
                 const tsv = gist.files['books.tsv'].content;
-                const remoteBooks = await tsvToBooks(tsv);
+                const result = await tsvToBooks(tsv);
                 
                 // Remote is source of truth - overwrite local
-                state.books = remoteBooks;
+                state.books = result.books;
                 
                 // Re-render books view
                 renderBooks();
                 
                 // Save to localStorage as cache
                 saveToLocalStorage();
-            }
-            
-            if (manualSync) {
+                
+                // If columns were in wrong order, push corrected TSV back to cloud
+                if (result.needsReorder) {
+                    console.log('Fixing TSV column order...');
+                    await updateGist(gistId, token);
+                    if (manualSync) {
+                        showSyncStatus('Synced successfully! (column order fixed)', 'success');
+                    }
+                } else if (manualSync) {
+                    showSyncStatus('Synced successfully!', 'success');
+                }
+            } else if (manualSync) {
                 showSyncStatus('Synced successfully!', 'success');
             }
         }

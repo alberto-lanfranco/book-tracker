@@ -222,12 +222,12 @@ Body: {
 
 #### TSV Structure
 ```tsv
-isbn	title	author	year	description	coverUrl	tags	addedAt
-9780547928227	The Hobbit	J.R.R. Tolkien	1937	A fantasy novel about...	https://...	to_read,fantasy,classic	2025-12-08T10:30:00.000Z
-9780451524935	1984	George Orwell	1949	Dystopian social...	https://...	reading,dystopian,scifi	2025-12-07T15:45:00.000Z
-9780441013593	Dune	Frank Herbert	1965	Science fiction novel...	https://...	read,09_stars,scifi,epic	2025-12-06T20:15:00.000Z
+addedAt	isbn	tags	title	author	year	coverUrl	description
+2025-12-08T10:30:00.000Z	9780547928227	to_read,fantasy,classic	The Hobbit	J.R.R. Tolkien	1937	https://...	A fantasy novel about...
+2025-12-07T15:45:00.000Z	9780451524935	reading,dystopian,scifi	1984	George Orwell	1949	https://...	Dystopian social...
+2025-12-06T20:15:00.000Z	9780441013593	read,09_stars,scifi,epic	Dune	Frank Herbert	1965	https://...	Science fiction novel...
 ```
-- **Columns**: isbn, title, author, year, description, coverUrl, tags, addedAt
+- **Columns** (enforced order): addedAt, isbn, tags, title, author, year, coverUrl, description
 - **Delimiter**: Tab character (\t)
 - **Encoding**: UTF-8
 - **Data Model**: **Denormalized** - TSV stores complete book metadata to allow user editing
@@ -247,6 +247,8 @@ isbn	title	author	year	description	coverUrl	tags	addedAt
   - If any denormalized field (title, author, year, description, coverUrl) is missing, fetch from Google Books API
   - API values are only used to fill missing fields; existing TSV values are preserved
   - Automatically adds missing columns to support backward compatibility
+  - **Column order enforcement**: Parser can read columns in any order, but exports enforce: addedAt, isbn, tags, title, author, year, coverUrl, description
+  - If wrong column order detected, TSV is automatically fixed on next sync
   - Text fields are escaped (tabs/newlines replaced with spaces)
 
 #### Local Storage (Cache)
@@ -541,7 +543,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.3.1
+- **Current Version**: 2.4.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -557,6 +559,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.4.0** (2025-12-12): Enforced TSV column order (addedAt, isbn, tags, title, author, year, coverUrl, description), automatic column reordering on sync if wrong order detected
 - **2.3.1** (2025-12-12): Improved manual entry UX - removed cover preview from top, removed asterisks, reordered fields, added dedicated "Save Book" button, list buttons now toggle instead of immediate save
 - **2.3.0** (2025-12-12): Added manual book entry feature with dedicated modal, manual entry button at bottom of search results
 - **2.2.0** (2025-12-12): Denormalized TSV structure with all book metadata fields (title, author, year, description, coverUrl), added book metadata editing UI, automatic column handling for backward compatibility, smart API fallback for any missing fields

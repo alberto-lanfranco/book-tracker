@@ -561,7 +561,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.8.0
+- **Current Version**: 2.8.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -577,6 +577,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.8.1** (2025-12-12): Fixed vertical alignment of clear button in Books tab search field
 - **2.8.0** (2025-12-12): Added clear buttons (X) to both search fields - appears when text is present, clears input and refocuses on tap
 - **2.7.2** (2025-12-12): Fixed search result icon highlighting to match books by both Google Books ID and ISBN
 - **2.7.1** (2025-12-12): Removed book description from book cards in Books view - descriptions now only shown in full-page detail modal

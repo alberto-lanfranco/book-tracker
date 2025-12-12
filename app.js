@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -488,6 +488,15 @@ function createSearchResultItem(book) {
             <div class="book-title">${book.title}</div>
             <div class="book-author">${book.author}</div>
             <div class="book-year">${book.year}</div>
+        </div>
+        <div class="search-result-status">
+            ${currentListTag ? `
+                <div class="status-indicator ${currentListTag}">
+                    ${currentListTag === 'to_read' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>' : ''}
+                    ${currentListTag === 'reading' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>' : ''}
+                    ${currentListTag === 'read' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                </div>
+            ` : ''}
         </div>
     `;
 
@@ -1669,15 +1678,13 @@ function showSyncStatus(message, type = 'info') {
         console.warn('syncStatus element not found');
         return;
     }
-    syncStatus.textContent = message;
-    syncStatus.className = `sync-status sync-${type}`;
     
-    if (type === 'success') {
-        setTimeout(() => {
-            syncStatus.textContent = '';
-            syncStatus.className = 'sync-status';
-        }, 3000);
-    }
+    syncStatus.innerHTML = `
+        <span class="status-message-text">${message}</span>
+        <button class="status-dismiss-btn" onclick="this.parentElement.style.display='none'">×</button>
+    `;
+    syncStatus.className = `sync-status sync-${type}`;
+    syncStatus.style.display = 'flex';
 }
 
 // Save settings
@@ -1781,7 +1788,10 @@ function showUpdateNotification(registration) {
                     <strong>🎉 Update Available!</strong>
                     <span>A new version of the app has been downloaded.</span>
                 </div>
-                <button class="btn btn-primary" id="updateNowBtn">Restart App</button>
+                <div class="update-banner-actions">
+                    <button class="btn btn-primary" id="updateNowBtn">Restart App</button>
+                    <button class="update-dismiss-btn" id="updateDismissBtn">×</button>
+                </div>
             </div>
         `;
         document.body.appendChild(banner);
@@ -1791,6 +1801,12 @@ function showUpdateNotification(registration) {
             if (registration.waiting) {
                 registration.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
+        });
+        
+        // Add click handler to dismiss button
+        document.getElementById('updateDismissBtn').addEventListener('click', () => {
+            banner.classList.remove('show');
+            setTimeout(() => banner.remove(), 300);
         });
         
         // Show banner with animation
@@ -1834,15 +1850,13 @@ function showMaintenanceStatus(message, type = 'info') {
         console.warn('maintenanceStatus element not found');
         return;
     }
-    maintenanceStatus.textContent = message;
-    maintenanceStatus.className = `sync-status sync-${type}`;
-    maintenanceStatus.style.display = 'block';
     
-    if (type === 'success' || type === 'error') {
-        setTimeout(() => {
-            maintenanceStatus.style.display = 'none';
-        }, 3000);
-    }
+    maintenanceStatus.innerHTML = `
+        <span class="status-message-text">${message}</span>
+        <button class="status-dismiss-btn" onclick="this.parentElement.style.display='none'">×</button>
+    `;
+    maintenanceStatus.className = `sync-status sync-${type}`;
+    maintenanceStatus.style.display = 'flex';
 }
 
 // Start the app when DOM is ready

@@ -174,6 +174,38 @@ body {
     flex-shrink: 0;
 }
 
+.search-result-status {
+    margin-left: auto;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.status-indicator {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+}
+
+.status-indicator.to_read {
+    background: rgba(10, 132, 255, 0.15);
+    color: var(--accent);
+}
+
+.status-indicator.reading {
+    background: rgba(255, 159, 10, 0.15);
+    color: #ff9f0a;
+}
+
+.status-indicator.read {
+    background: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+}
+
 .book-cover {
     width: 60px;
     height: 90px;
@@ -679,11 +711,44 @@ body.keyboard-open .bottom-nav {
 
 .sync-status {
     margin-top: 16px;
-    padding: 12px;
+    padding: 12px 16px;
     border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.status-message-text {
+    flex: 1;
+}
+
+.status-dismiss-btn {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.status-dismiss-btn:hover {
+    opacity: 1;
+}
+
+.status-dismiss-btn:active {
+    opacity: 0.5;
 }
 
 .sync-info {
@@ -1060,7 +1125,7 @@ body.keyboard-open .bottom-nav {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
 }
 
 .button-label {
@@ -1259,9 +1324,38 @@ body.keyboard-open .bottom-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     padding: 16px 20px;
     padding-top: max(16px, env(safe-area-inset-top));
+}
+
+.update-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.update-dismiss-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.update-dismiss-btn:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.95);
 }
 
 .update-banner-text {
@@ -1301,9 +1395,14 @@ body.keyboard-open .bottom-nav {
     .update-banner-content {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
+    }
+    
+    .update-banner-actions {
+        width: 100%;
     }
     
     .update-banner .btn {
-        width: 100%;
+        flex: 1;
     }
 }

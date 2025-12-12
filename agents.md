@@ -154,6 +154,7 @@ Body: {
 - Each result shows:
   - Cover image (60x90px)
   - Title, author, year
+  - Status indicator (colored circular badge with icon) if book exists in a list
 - Tap result to open detail modal with list action buttons
 - **Manual Entry Button**:
   - Displayed at bottom of search results
@@ -321,12 +322,21 @@ addedAt	isbn	tags	title	author	year	coverUrl	description
   - Event listeners update state and re-render on sort control changes
 - **UI Location**: Sort controls appear in header of Books view
 
-### 7. Toast Notifications
-- Success messages for:
-  - "Book added!"
-  - "Book moved!"
-- Error message for duplicates
-- 2-second display with fade-out animation
+### 7. Notifications and Alerts
+- **Toast notifications** (brief messages):
+  - Success: "Book added!", "Book moved!"
+  - Error: Duplicate book warnings
+  - 2-second display with fade-out animation
+- **Status messages** (sync/maintenance):
+  - Displayed in Settings view
+  - Include dismiss button (×)
+  - Persist until manually dismissed
+  - Types: info (blue), success (green), error (red)
+- **Update banner** (top of screen):
+  - Appears when new app version downloaded
+  - Sticky notification with dismiss button
+  - "Restart App" button to apply update
+  - Dismiss to hide without updating
 
 ## Styling Guidelines
 
@@ -558,7 +568,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.9.0
+- **Current Version**: 2.10.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -579,6 +589,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **2.10.0** (2025-12-12): Added status indicators to search results showing current list placement, reduced button label spacing, added dismiss buttons to all alerts/banners (no auto-hide)
 - **2.9.0** (2025-12-12): Simplified search results in Add tab - removed list action icons from results, added labels below buttons in detail modal when viewing from search
 - **2.8.2** (2025-12-12): Removed grey background from filter section in Books tab for cleaner appearance
 - **2.8.1** (2025-12-12): Fixed vertical alignment of clear button in Books tab search field

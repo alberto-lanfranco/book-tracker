@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.7.1';
+const APP_VERSION = '2.7.2';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -438,8 +438,11 @@ function createSearchResultItem(book) {
         ? book.coverUrl.replace('http://', 'https://')
         : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="90" fill="%232c2c2e"%3E%3Crect width="60" height="90"/%3E%3Crect width="60" height="90"/%3E%3Ctext x="50%25" y="50%25" fill="%238e8e93" text-anchor="middle" dy=".3em" font-size="24"%3E📖%3C/text%3E%3C/svg%3E';
 
-    // Check if book exists in database
-    const existingBook = state.books.find(b => b.id === book.id);
+    // Check if book exists in database (match by Google Books ID or ISBN)
+    const existingBook = state.books.find(b => 
+        b.id === book.id || 
+        (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
+    );
     const currentListTag = existingBook ? existingBook.tags.find(t => ['to_read', 'reading', 'read'].includes(t)) : null;
 
     div.innerHTML = `

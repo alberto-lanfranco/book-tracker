@@ -559,7 +559,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.7.1
+- **Current Version**: 2.7.2
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -575,6 +575,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.7.2** (2025-12-12): Fixed search result icon highlighting to match books by both Google Books ID and ISBN
 - **2.7.1** (2025-12-12): Removed book description from book cards in Books view - descriptions now only shown in full-page detail modal
 - **2.7.0** (2025-12-12): Search results now highlight list status icons if book already exists in database, clicking icon changes list status instead of re-adding
 - **2.6.4** (2025-12-12): Increased Google Books API search debounce from 500ms to 1000ms to reduce unnecessary API calls

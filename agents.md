@@ -558,7 +558,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.6.0
+- **Current Version**: 2.6.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -574,6 +574,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Document version changes in commit messages
 
 ### Version History
+- **2.6.1** (2025-12-12): Fixed combined tag filtering - changed from .some() to .every() so books must match ALL selected tags
 - **2.6.0** (2025-12-12): Enhanced tag filter system - dynamic manual tags with orange accent, removed "All" filter, multi-group filtering (list + manual), toggle deselection, vertical separator, alphabetical sorting
 - **2.5.1** (2025-12-12): Fixed monospace font to apply to all elements including buttons using !important
 - **2.5.0** (2025-12-12): Changed font to monospace for entire interface

@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.6.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -726,10 +726,10 @@ function renderBooks() {
     // Apply filters
     let filteredBooks = state.books;
     
-    // Filter by selected tags
+    // Filter by selected tags (must match ALL selected tags)
     if (state.filterTags.length > 0) {
         filteredBooks = filteredBooks.filter(book => 
-            state.filterTags.some(tag => book.tags && book.tags.includes(tag))
+            state.filterTags.every(tag => book.tags && book.tags.includes(tag))
         );
     }
     

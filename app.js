@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.1.1';
+const APP_VERSION = '2.3.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -263,6 +263,17 @@ async function handleSearch() {
             displaySearchResults(data.items);
         } else {
             searchResults.innerHTML = '<div class="loading">No books found</div>';
+            // Add manual entry button for no results
+            const manualEntryButton = document.createElement('button');
+            manualEntryButton.className = 'btn-manual-entry';
+            manualEntryButton.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                <span>Add book manually</span>
+            `;
+            manualEntryButton.addEventListener('click', showManualEntryModal);
+            searchResults.appendChild(manualEntryButton);
         }
     } catch (error) {
         console.error('Search error:', error);
@@ -304,6 +315,18 @@ function displaySearchResults(books) {
         const resultItem = createSearchResultItem(bookData);
         searchResults.appendChild(resultItem);
     });
+    
+    // Add manual entry button at the bottom
+    const manualEntryButton = document.createElement('button');
+    manualEntryButton.className = 'btn-manual-entry';
+    manualEntryButton.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"></path>
+        </svg>
+        <span>Can't find your book? Add manually</span>
+    `;
+    manualEntryButton.addEventListener('click', showManualEntryModal);
+    searchResults.appendChild(manualEntryButton);
 }
 
 // Create search result item
@@ -680,8 +703,143 @@ function getListStatusButtons(currentTag, bookId) {
     return buttons.join('');
 }
 
+// Update book metadata
+function updateBookMetadata(bookId, updates) {
+    const book = state.books.find(b => b.id === bookId);
+    if (book) {
+        Object.assign(book, updates);
+        saveToLocalStorage();
+        renderBooks();
+    }
+}
+
+// Show manual entry modal
+function showManualEntryModal() {
+    const modal = document.getElementById('bookDetailModal');
+    const content = document.getElementById('bookDetailContent');
+    
+    const placeholderCover = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" fill="%232c2c2e"%3E%3Crect width="200" height="300"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="64"%3E📖%3C/text%3E%3C/svg%3E';
+    
+    content.innerHTML = `
+        <div class="detail-cover-container">
+            <img src="${placeholderCover}" alt="Book cover" class="detail-cover" id="manualCoverPreview">
+            <input type="text" class="edit-input" id="manualCoverUrl" placeholder="Cover image URL (optional)">
+        </div>
+        <div class="detail-info">
+            <h2 style="margin-bottom: 16px;">Add Book Manually</h2>
+            <label>Title *</label>
+            <input type="text" class="edit-input edit-title" id="manualTitle" placeholder="Enter book title" required>
+            <label>Author *</label>
+            <input type="text" class="edit-input" id="manualAuthor" placeholder="Enter author name" required>
+            <label>Year</label>
+            <input type="text" class="edit-input" id="manualYear" placeholder="Publication year (e.g., 2020)" style="width: 150px;">
+            <label>ISBN (optional, but recommended for cloud sync)</label>
+            <input type="text" class="edit-input" id="manualIsbn" placeholder="ISBN-10 or ISBN-13">
+            <label>Description</label>
+            <textarea class="edit-textarea" id="manualDescription" placeholder="Book description or notes"></textarea>
+            <label>Add to list:</label>
+            <div class="detail-actions" style="margin-top: 12px;">
+                <div class="action-group">
+                    <button class="btn btn-icon" data-list="to_read" title="To Read">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        <span style="font-size: 13px; margin-left: 4px;">To Read</span>
+                    </button>
+                    <button class="btn btn-icon" data-list="reading" title="Reading">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                        <span style="font-size: 13px; margin-left: 4px;">Reading</span>
+                    </button>
+                    <button class="btn btn-icon" data-list="read" title="Read">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span style="font-size: 13px; margin-left: 4px;">Read</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Update cover preview when URL changes
+    const coverUrlInput = document.getElementById('manualCoverUrl');
+    const coverPreview = document.getElementById('manualCoverPreview');
+    coverUrlInput.addEventListener('input', (e) => {
+        const url = e.target.value.trim();
+        if (url) {
+            coverPreview.src = url;
+            coverPreview.onerror = () => {
+                coverPreview.src = placeholderCover;
+            };
+        } else {
+            coverPreview.src = placeholderCover;
+        }
+    });
+    
+    // Add event listeners for list buttons
+    content.querySelectorAll('button[data-list]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const title = document.getElementById('manualTitle').value.trim();
+            const author = document.getElementById('manualAuthor').value.trim();
+            
+            if (!title || !author) {
+                showToast('⚠️ Title and Author are required');
+                return;
+            }
+            
+            const listTag = btn.dataset.list;
+            const year = document.getElementById('manualYear').value.trim() || 'N/A';
+            const isbn = document.getElementById('manualIsbn').value.trim() || null;
+            const description = document.getElementById('manualDescription').value.trim() || null;
+            const coverUrl = document.getElementById('manualCoverUrl').value.trim() || null;
+            
+            // Create book object
+            const manualBook = {
+                id: isbn || `manual_${Date.now()}`, // Use ISBN or generate unique ID
+                title: title,
+                author: author,
+                year: year,
+                isbn: isbn,
+                description: description,
+                coverUrl: coverUrl,
+                tags: [listTag],
+                addedAt: new Date().toISOString()
+            };
+            
+            // Warn if no ISBN
+            if (!isbn) {
+                showToast('⚠️ Book added without ISBN - won\'t sync to cloud');
+            } else {
+                showToast('Book added!');
+            }
+            
+            // Add to state
+            state.books.push(manualBook);
+            saveToLocalStorage();
+            renderBooks();
+            
+            // Close modal and clear search
+            closeBookDetail();
+            searchResults.innerHTML = '';
+            searchInput.value = '';
+        });
+    });
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Focus on title input
+    setTimeout(() => {
+        document.getElementById('manualTitle').focus();
+    }, 100);
+}
+
 // Show book detail modal
-function showBookDetail(book, source = 'list') {
+function showBookDetail(book, source = 'list', editMode = false) {
     const modal = document.getElementById('bookDetailModal');
     const content = document.getElementById('bookDetailContent');
 
@@ -691,6 +849,15 @@ function showBookDetail(book, source = 'list') {
 
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
+
+    // Edit button for books in lists
+    let editButton = '';
+    if (source === 'list') {
+        editButton = editMode 
+            ? `<button class="btn btn-small" data-action="save-edit" data-book-id="${book.id}">Save</button>
+               <button class="btn btn-small" data-action="cancel-edit" data-book-id="${book.id}">Cancel</button>`
+            : `<button class="btn btn-small" data-action="edit" data-book-id="${book.id}">✏️ Edit</button>`;
+    }
 
     // Show tags section for books in lists (filter out list status tags and rating tags)
     let tagsSection = '';
@@ -791,31 +958,79 @@ function showBookDetail(book, source = 'list') {
         `;
     }
 
-    content.innerHTML = `
-        <div class="detail-cover-container">
-            <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' fill=\'%232c2c2e\'%3E%3Crect width=\'200\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'64\'%3E📖%3C/text%3E%3C/svg%3E'">
-        </div>
-        <div class="detail-info">
-            <h2 class="detail-title">${book.title}</h2>
-            <div class="detail-author">${book.author}</div>
-            <div class="detail-year">${book.year}</div>
-            ${isbn}
-            ${tagsSection}
-            ${ratingSection}
-            ${listActions}
-            <div class="detail-description">${description}</div>
-        </div>
-    `;
+    // Render content based on edit mode
+    if (editMode) {
+        content.innerHTML = `
+            <div class="detail-cover-container">
+                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' fill=\'%232c2c2e\'%3E%3Crect width=\'200\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'64\'%3E📖%3C/text%3E%3C/svg%3E'">
+                <input type="text" class="edit-input" id="editCoverUrl" value="${book.coverUrl || ''}" placeholder="Cover URL">
+            </div>
+            <div class="detail-info">
+                <input type="text" class="edit-input edit-title" id="editTitle" value="${book.title}" placeholder="Title">
+                <input type="text" class="edit-input" id="editAuthor" value="${book.author}" placeholder="Author">
+                <input type="text" class="edit-input" id="editYear" value="${book.year}" placeholder="Year" style="width: 100px;">
+                ${isbn}
+                <label>Description:</label>
+                <textarea class="edit-textarea" id="editDescription" placeholder="Description">${book.description || ''}</textarea>
+                ${tagsSection}
+                ${ratingSection}
+                <div class="detail-actions" style="margin-top: 16px;">
+                    ${editButton}
+                </div>
+            </div>
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="detail-cover-container">
+                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' fill=\'%232c2c2e\'%3E%3Crect width=\'200\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'64\'%3E📖%3C/text%3E%3C/svg%3E'">
+            </div>
+            <div class="detail-info">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                    <h2 class="detail-title">${book.title}</h2>
+                    ${editButton}
+                </div>
+                <div class="detail-author">${book.author}</div>
+                <div class="detail-year">${book.year}</div>
+                ${isbn}
+                ${tagsSection}
+                ${ratingSection}
+                ${listActions}
+                <div class="detail-description">${description}</div>
+            </div>
+        `;
+    }
 
     // Add event listeners for action buttons
-    content.querySelectorAll('.detail-actions button').forEach(btn => {
+    content.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             if (btn.dataset.action === 'delete') {
                 // Delete button
                 removeBook(book.id);
                 closeBookDetail();
-            } else if (btn.dataset.tag) {
-                // List status buttons
+            } else if (btn.dataset.action === 'edit') {
+                // Edit button
+                showBookDetail(book, source, true);
+            } else if (btn.dataset.action === 'save-edit') {
+                // Save edit button
+                const updates = {
+                    title: document.getElementById('editTitle').value.trim() || book.title,
+                    author: document.getElementById('editAuthor').value.trim() || book.author,
+                    year: document.getElementById('editYear').value.trim() || book.year,
+                    description: document.getElementById('editDescription').value.trim() || null,
+                    coverUrl: document.getElementById('editCoverUrl').value.trim() || null
+                };
+                updateBookMetadata(book.id, updates);
+                // Refresh the modal with updated data
+                const updatedBook = state.books.find(b => b.id === book.id);
+                if (updatedBook) {
+                    showBookDetail(updatedBook, source, false);
+                }
+                showToast('Book updated!');
+            } else if (btn.dataset.action === 'cancel-edit') {
+                // Cancel edit button
+                showBookDetail(book, source, false);
+            } else if (btn.dataset.tag && !editMode) {
+                // List status buttons (only when not in edit mode)
                 const newTag = btn.dataset.tag;
                 if (source === 'search') {
                     addBookToList(book, newTag);
@@ -893,17 +1108,27 @@ function closeBookDetail() {
 
 // ===== PASTEMYST SYNC FUNCTIONS =====
 
-// Convert books to TSV format (minimal: isbn, rating, tags, addedAt)
+// Convert books to TSV format (denormalized: all fields stored)
 // Tags now include list status (to_read, reading, read)
 function booksToTSV() {
-    const lines = ['isbn\ttags\taddedAt'];
+    const lines = ['isbn\ttitle\tauthor\tyear\tdescription\tcoverUrl\ttags\taddedAt'];
     
     state.books.forEach(book => {
         // Only sync books that have ISBN
         if (book.isbn) {
             const tags = book.tags && book.tags.length > 0 ? book.tags.join(',') : '';
+            // Escape tabs and newlines in text fields
+            const escapeField = (str) => {
+                if (!str) return '';
+                return String(str).replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '');
+            };
             const row = [
-                book.isbn,
+                book.isbn || '',
+                escapeField(book.title),
+                escapeField(book.author),
+                book.year || '',
+                escapeField(book.description),
+                book.coverUrl || '',
                 tags,
                 book.addedAt || ''
             ];
@@ -914,37 +1139,70 @@ function booksToTSV() {
     return lines.join('\n');
 }
 
-// Parse TSV to books (fetch full data from Google Books API using ISBN)
-// New format: isbn, tags, addedAt (tags include list status and rating)
+// Parse TSV to books (use TSV data first, fallback to API if fields missing)
+// New format: isbn, title, author, year, description, coverUrl, tags, addedAt
 async function tsvToBooks(tsv) {
     const lines = tsv.trim().split('\n');
     if (lines.length < 1) return [];
     
     const books = [];
     
-    // Skip header line and fetch book data from Google Books API
+    // Parse header to detect columns
+    const header = lines[0].split('\t');
+    const columnMap = {};
+    header.forEach((col, idx) => {
+        columnMap[col.trim()] = idx;
+    });
+    
+    // Expected columns with defaults
+    const expectedColumns = ['isbn', 'title', 'author', 'year', 'description', 'coverUrl', 'tags', 'addedAt'];
+    
+    // Skip header line and parse book data
     const fetchPromises = [];
     
     for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split('\t');
-        if (cols.length < 2) continue;
+        if (cols.length < 1) continue;
         
-        const [isbn, tagsStr, addedAt] = cols;
+        // Extract values from TSV (use column map for flexibility)
+        const getValue = (colName) => {
+            const idx = columnMap[colName];
+            return idx !== undefined ? (cols[idx] || '').trim() : '';
+        };
+        
+        const isbn = getValue('isbn');
+        if (!isbn) continue; // Skip rows without ISBN
+        
+        const title = getValue('title');
+        const author = getValue('author');
+        const year = getValue('year');
+        const description = getValue('description');
+        const coverUrl = getValue('coverUrl');
+        const tagsStr = getValue('tags');
+        const addedAt = getValue('addedAt');
+        
         const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
         
-        // Check if we already have this book in local cache
-        const cachedBook = state.books.find(b => b.isbn === isbn);
+        // Check if we need to fetch data from API (any denormalized field missing)
+        const needsAPIFetch = !title || !author || !year || !description || !coverUrl;
         
-        if (cachedBook) {
-            // Use cached data
+        if (!needsAPIFetch) {
+            // All required data present in TSV - use it directly
+            // Generate ID from ISBN if not available
             const book = {
-                ...cachedBook,
+                id: isbn, // Use ISBN as ID for consistency
+                isbn: isbn,
+                title: title || 'Unknown Title',
+                author: author || 'Unknown Author',
+                year: year || 'N/A',
+                description: description || null,
+                coverUrl: coverUrl || null,
                 tags: tags,
                 addedAt: addedAt || null
             };
             books.push(book);
         } else {
-            // Fetch from Google Books API
+            // Fetch missing data from Google Books API
             fetchPromises.push(
                 fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`)
                     .then(res => res.json())
@@ -953,23 +1211,54 @@ async function tsvToBooks(tsv) {
                             const item = data.items[0];
                             const volumeInfo = item.volumeInfo;
                             
+                            // Use TSV values if present, otherwise use API values
                             const book = {
-                                id: item.id,
-                                title: volumeInfo.title || 'Unknown Title',
-                                author: volumeInfo.authors?.join(', ') || 'Unknown Author',
-                                year: volumeInfo.publishedDate?.substring(0, 4) || 'N/A',
-                                coverUrl: getBestCoverUrl(volumeInfo.imageLinks),
+                                id: item.id || isbn,
                                 isbn: isbn,
-                                description: volumeInfo.description || null,
+                                title: title || volumeInfo.title || 'Unknown Title',
+                                author: author || volumeInfo.authors?.join(', ') || 'Unknown Author',
+                                year: year || volumeInfo.publishedDate?.substring(0, 4) || 'N/A',
+                                description: description || volumeInfo.description || null,
+                                coverUrl: coverUrl || getBestCoverUrl(volumeInfo.imageLinks) || null,
                                 tags: tags,
                                 addedAt: addedAt || null
                             };
                             
                             books.push(book);
+                            
+                            // Mark that this book needs TSV update
+                            book._needsUpdate = true;
+                        } else {
+                            // API returned no results - use TSV data as-is
+                            const book = {
+                                id: isbn,
+                                isbn: isbn,
+                                title: title || 'Unknown Title',
+                                author: author || 'Unknown Author',
+                                year: year || 'N/A',
+                                description: description || null,
+                                coverUrl: coverUrl || null,
+                                tags: tags,
+                                addedAt: addedAt || null
+                            };
+                            books.push(book);
                         }
                     })
                     .catch(err => {
                         console.error(`Failed to fetch book with ISBN ${isbn}:`, err);
+                        // Use TSV data as fallback
+                        const book = {
+                            id: isbn,
+                            isbn: isbn,
+                            title: title || 'Unknown Title',
+                            author: author || 'Unknown Author',
+                            year: year || 'N/A',
+                            description: description || null,
+                            coverUrl: coverUrl || null,
+                            tags: tags,
+                            addedAt: addedAt || null
+                        };
+                        books.push(book);
                     })
             );
         }
@@ -977,6 +1266,10 @@ async function tsvToBooks(tsv) {
     
     // Wait for all API calls to complete
     await Promise.all(fetchPromises);
+    
+    // Check if any books need TSV update
+    const needsUpdate = books.some(b => b._needsUpdate);
+    books.forEach(b => delete b._needsUpdate);
     
     return books;
 }

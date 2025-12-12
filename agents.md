@@ -156,6 +156,13 @@ Body: {
   - Three list action buttons (icons)
 - Tap result to open detail modal
 - Tap icon to add directly to list
+- **Manual Entry Button**:
+  - Displayed at bottom of search results
+  - Also shown when no results found
+  - Opens modal for manual book entry
+  - Fields: Title*, Author*, Year, ISBN, Description, Cover URL
+  - Add to list buttons (To Read, Reading, Read)
+  - Books without ISBN won't sync to cloud (warning shown)
 
 ### 2. Book Lists
 - **Filter Controls** (at top of Books view):
@@ -182,13 +189,23 @@ Body: {
 - Larger cover image (200x300px)
 - Complete description
 - ISBN display if available
+- **Edit Mode** - shown for books in lists:
+  - Edit button (✏️) in top-right corner
+  - Click to enter edit mode with editable fields:
+    - Title (text input)
+    - Author (text input)
+    - Year (text input)
+    - Description (textarea)
+    - Cover URL (text input)
+  - Save/Cancel buttons to commit or discard changes
+  - Changes sync to cloud immediately on save
 - **Tags management** - shown for books in lists:
   - Add tags by typing and pressing Enter
   - Remove tags by clicking × button
   - Tags displayed as pills with remove button
 - **Rating input** (10 tappable stars) - shown only for books with Read tag
 - **From search**: Shows 3 list buttons to add book
-- **From list**: Shows 3 list buttons (current highlighted) + delete button
+- **From list**: Shows 3 list buttons (current highlighted) + delete button + edit button
 - Click outside or X button to close
 
 ### 4. Data Persistence
@@ -200,24 +217,36 @@ Body: {
 - **Authentication**: Personal access token with "gist" scope
 - **Endpoint**: https://api.github.com/gists
 - **Rate Limit**: 5000 requests/hour (authenticated)
-- **Sync Strategy**: Cloud stores essential data only (isbn, tags including list status and rating, timestamp). Full book metadata is fetched from Google Books API on sync and cached locally.
+- **Sync Strategy**: Cloud stores complete denormalized book data (isbn, title, author, year, description, coverUrl, tags, timestamp). This allows users to edit metadata without re-fetching from API. Missing fields are fetched from Google Books API as fallback.
 
 #### TSV Structure
 ```tsv
-isbn	tags	addedAt
-9780547928227	to_read,fantasy,classic	2025-12-08T10:30:00.000Z
-9780451524935	reading,dystopian,scifi	2025-12-07T15:45:00.000Z
-9780441013593	read,09_stars,scifi,epic	2025-12-06T20:15:00.000Z
+isbn	title	author	year	description	coverUrl	tags	addedAt
+9780547928227	The Hobbit	J.R.R. Tolkien	1937	A fantasy novel about...	https://...	to_read,fantasy,classic	2025-12-08T10:30:00.000Z
+9780451524935	1984	George Orwell	1949	Dystopian social...	https://...	reading,dystopian,scifi	2025-12-07T15:45:00.000Z
+9780441013593	Dune	Frank Herbert	1965	Science fiction novel...	https://...	read,09_stars,scifi,epic	2025-12-06T20:15:00.000Z
 ```
-- **Columns**: isbn, tags, addedAt
+- **Columns**: isbn, title, author, year, description, coverUrl, tags, addedAt
 - **Delimiter**: Tab character (\t)
 - **Encoding**: UTF-8
-- **Tags**: Comma-separated list including:
-  - List status: `to_read`, `reading`, or `read` (required, only one)
-  - Rating: `01_stars` to `10_stars` (optional, only one, typically for books with `read` tag)
-  - Custom tags: Any user-defined tags
-- **addedAt**: ISO 8601 timestamp of when book was added to current list (updates when moved)
-- **Data Model**: TSV stores only essential sync data (ISBN as identifier, tags including list placement and rating, timestamp). All other book metadata (title, author, cover, description) is fetched from Google Books API and cached locally only.
+- **Data Model**: **Denormalized** - TSV stores complete book metadata to allow user editing
+  - **isbn**: ISBN identifier (required)
+  - **title**: Book title (editable by user)
+  - **author**: Author name(s) (editable by user)
+  - **year**: Publication year (editable by user)
+  - **description**: Full book description (editable by user)
+  - **coverUrl**: URL to book cover image (editable by user)
+  - **tags**: Comma-separated list including:
+    - List status: `to_read`, `reading`, or `read` (required, only one)
+    - Rating: `01_stars` to `10_stars` (optional, only one, typically for books with `read` tag)
+    - Custom tags: Any user-defined tags
+  - **addedAt**: ISO 8601 timestamp of when book was added to current list (updates when moved)
+- **Parse Strategy**: 
+  - TSV values take precedence over API values
+  - If any denormalized field (title, author, year, description, coverUrl) is missing, fetch from Google Books API
+  - API values are only used to fill missing fields; existing TSV values are preserved
+  - Automatically adds missing columns to support backward compatibility
+  - Text fields are escaped (tabs/newlines replaced with spaces)
 
 #### Local Storage (Cache)
 - localStorage key: `bookTrackerData`
@@ -262,10 +291,10 @@ isbn	tags	addedAt
 5. Shows success/error status message
 
 #### Push on Change
-1. Any book operation (add/move/delete/rate/tag)
+1. Any book operation (add/move/delete/rate/tag/edit)
 2. `saveToLocalStorage()` called (caches full book data locally)
 3. Automatically calls `pushToGitHub()`
-4. Converts books to minimal TSV → `booksToTSV()` (isbn, tags, addedAt)
+4. Converts books to denormalized TSV → `booksToTSV()` (isbn, title, author, year, description, coverUrl, tags, addedAt)
 5. Updates gist → `updateGist(gistId, tsvContent)`
 6. Silent push (no UI status shown)
 7. Note: Only books with ISBN are synced to cloud
@@ -356,12 +385,32 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 ## Common Operations
 
 ### Adding a Book
+
+#### From Search Results
 1. Search result click → `addBookToList(book, listTag)`
 2. Check for duplicates by ID
 3. Add book to `state.books[]` array with listTag in tags
 4. Save to localStorage
 5. Render books
 6. Show toast notification
+
+#### Manual Entry
+1. Click "Add manually" button (bottom of search results or when no results)
+2. `showManualEntryModal()` opens modal with entry form
+3. Fill in fields:
+   - Title* (required)
+   - Author* (required)
+   - Year (optional)
+   - ISBN (optional but recommended for cloud sync)
+   - Description (optional)
+   - Cover URL (optional, with live preview)
+4. Click one of three list buttons (To Read, Reading, Read)
+5. Validates required fields
+6. Creates book object with `id: isbn || 'manual_${timestamp}'`
+7. Adds to state.books array
+8. Saves to localStorage (triggers cloud sync if ISBN present)
+9. Shows toast notification with ISBN warning if no ISBN
+10. Closes modal and clears search
 
 ### Changing Book List Status
 1. Click non-active list icon
@@ -371,6 +420,16 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 5. Save to localStorage
 6. Render books
 7. Show toast notification
+
+### Editing Book Metadata
+1. Open book detail modal
+2. Click edit button (✏️)
+3. Modify fields in edit mode
+4. Click "Save" → `updateBookMetadata(bookId, updates)`
+5. Updates book object in state.books array
+6. Save to localStorage (triggers cloud sync)
+7. Re-render books view
+8. Show toast notification
 
 ### Deleting a Book
 1. Click delete button
@@ -478,6 +537,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
+- **Current Version**: 2.3.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -491,6 +551,10 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - Update both `APP_VERSION` in `app.js` and `CACHE_VERSION` in `sw.js`
 - Keep versions synchronized between app and service worker
 - Document version changes in commit messages
+
+### Version History
+- **2.3.0** (2025-12-12): Added manual book entry feature with dedicated modal, manual entry button at bottom of search results
+- **2.2.0** (2025-12-12): Denormalized TSV structure with all book metadata fields (title, author, year, description, coverUrl), added book metadata editing UI, automatic column handling for backward compatibility, smart API fallback for any missing fields
 
 ## Code Style Guidelines
 

@@ -175,6 +175,41 @@ body {
     font-weight: 400;
 }
 
+/* Manual Entry Button */
+.btn-manual-entry {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    margin-top: 16px;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--separator);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-manual-entry:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--bg-tertiary);
+}
+
+.btn-manual-entry:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+}
+
+.btn-manual-entry svg {
+    flex-shrink: 0;
+}
+
 /* Bottom Navigation */
 .bottom-nav {
     position: fixed;
@@ -960,6 +995,72 @@ body.keyboard-open .bottom-nav {
     line-height: 1.6;
     color: var(--text-secondary);
     white-space: pre-wrap;
+}
+
+/* Edit mode styles */
+.edit-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--separator);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 17px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.edit-input:focus {
+    border-color: var(--accent);
+}
+
+.edit-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.edit-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--separator);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.edit-textarea:focus {
+    border-color: var(--accent);
+}
+
+.detail-cover-container .edit-input {
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    background: var(--accent);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-small:active {
+    opacity: 0.8;
 }
 
 @media (max-width: 480px) {

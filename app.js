@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.4.2';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -24,6 +24,8 @@ function setRatingTag(tags, rating) {
 // Register service worker with update detection
 if ('serviceWorker' in navigator) {
     let refreshing = false;
+    let lastUpdateCheck = null;
+    let updateCheckInterval = null;
     
     // Detect controller change and reload page
     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -32,15 +34,44 @@ if ('serviceWorker' in navigator) {
         window.location.reload();
     });
     
+    // Function to check for updates
+    function checkForUpdates(registration) {
+        console.log('Checking for updates...');
+        lastUpdateCheck = Date.now();
+        registration.update();
+    }
+    
+    // Start periodic update checks (30 minutes)
+    function startUpdateChecks(registration) {
+        // Clear any existing interval
+        if (updateCheckInterval) {
+            clearInterval(updateCheckInterval);
+        }
+        
+        // Check every 30 minutes
+        updateCheckInterval = setInterval(() => {
+            checkForUpdates(registration);
+        }, 30 * 60 * 1000);
+    }
+    
+    // Stop periodic update checks
+    function stopUpdateChecks() {
+        if (updateCheckInterval) {
+            clearInterval(updateCheckInterval);
+            updateCheckInterval = null;
+        }
+    }
+    
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
             .then(reg => {
                 console.log('Service Worker registered');
                 
-                // Check for updates every 60 seconds
-                setInterval(() => {
-                    reg.update();
-                }, 60000);
+                // Initial check on load
+                checkForUpdates(reg);
+                
+                // Start periodic checks
+                startUpdateChecks(reg);
                 
                 // Listen for updates
                 reg.addEventListener('updatefound', () => {
@@ -52,6 +83,24 @@ if ('serviceWorker' in navigator) {
                             showUpdateNotification(reg);
                         }
                     });
+                });
+                
+                // Check when app gains focus (if last check > 30 mins ago)
+                window.addEventListener('focus', () => {
+                    const now = Date.now();
+                    const thirtyMinutes = 30 * 60 * 1000;
+                    
+                    if (!lastUpdateCheck || (now - lastUpdateCheck) > thirtyMinutes) {
+                        checkForUpdates(reg);
+                    }
+                    
+                    // Resume periodic checks when focused
+                    startUpdateChecks(reg);
+                });
+                
+                // Stop checks when app loses focus
+                window.addEventListener('blur', () => {
+                    stopUpdateChecks();
                 });
             })
             .catch(err => console.log('Service Worker registration failed', err));

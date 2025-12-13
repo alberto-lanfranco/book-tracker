@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.1.2';
+const APP_VERSION = '3.1.3';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -554,7 +554,7 @@ function createSearchResultItem(book) {
 
     const coverUrl = book.coverUrl 
         ? book.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="90" fill="%232c2c2e"%3E%3Crect width="60" height="90"/%3E%3Ctext x="50%25" y="50%25" fill="%238e8e93" text-anchor="middle" dy=".3em" font-size="24"%3E📖%3C/text%3E%3C/svg%3E';
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="90" viewBox="0 0 60 90"%3E%3Crect width="60" height="90" fill="%232c2c2e"/%3E%3Crect x="15" y="20" width="30" height="40" fill="none" stroke="%23636366" stroke-width="2" rx="2"/%3E%3Cline x1="20" y1="30" x2="40" y2="30" stroke="%23636366" stroke-width="1.5"/%3E%3Cline x1="20" y1="38" x2="40" y2="38" stroke="%23636366" stroke-width="1.5"/%3E%3Cline x1="20" y1="46" x2="35" y2="46" stroke="%23636366" stroke-width="1.5"/%3E%3C/svg%3E';
 
     // Check if book exists in database (match by Google Books ID or ISBN)
     const existingBook = state.books.find(b => 
@@ -564,7 +564,7 @@ function createSearchResultItem(book) {
     const currentListTag = existingBook ? getBookListStatus(existingBook) : null;
 
     div.innerHTML = `
-        <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'60\\' height=\\'90\\' fill=\\'%232c2c2e\\'%3E%3Crect width=\\'60\\' height=\\'90\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' fill=\\'%238e8e93\\' text-anchor=\\'middle\\' dy=\\'.3em\\' font-size=\\'24\\'%3E📖%3C/text%3E%3C/svg%3E'">
+        <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'60\\' height=\\'90\\' viewBox=\\'0 0 60 90\\'%3E%3Crect width=\\'60\\' height=\\'90\\' fill=\\'%232c2c2e\\'/%3E%3Crect x=\\'15\\' y=\\'20\\' width=\\'30\\' height=\\'40\\' fill=\\'none\\' stroke=\\'%23636366\\' stroke-width=\\'2\\' rx=\\'2\\'/%3E%3Cline x1=\\'20\\' y1=\\'30\\' x2=\\'40\\' y2=\\'30\\' stroke=\\'%23636366\\' stroke-width=\\'1.5\\'/%3E%3Cline x1=\\'20\\' y1=\\'38\\' x2=\\'40\\' y2=\\'38\\' stroke=\\'%23636366\\' stroke-width=\\'1.5\\'/%3E%3Cline x1=\\'20\\' y1=\\'46\\' x2=\\'35\\' y2=\\'46\\' stroke=\\'%23636366\\' stroke-width=\\'1.5\\'/%3E%3C/svg%3E'">
         <div class="book-info">
             <div class="book-title">${book.title}</div>
             <div class="book-author">${book.author}</div>
@@ -924,7 +924,7 @@ function createBookCard(book) {
 
     const coverUrl = book.coverUrl 
         ? book.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="120" fill="%232c2c2e"%3E%3Crect width="80" height="120"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="32"%3E📖%3C/text%3E%3C/svg%3E';
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="120" viewBox="0 0 80 120"%3E%3Crect width="80" height="120" fill="%232c2c2e"/%3E%3Crect x="20" y="30" width="40" height="55" fill="none" stroke="%23636366" stroke-width="2.5" rx="3"/%3E%3Cline x1="28" y1="45" x2="52" y2="45" stroke="%23636366" stroke-width="2"/%3E%3Cline x1="28" y1="55" x2="52" y2="55" stroke="%23636366" stroke-width="2"/%3E%3Cline x1="28" y1="65" x2="45" y2="65" stroke="%23636366" stroke-width="2"/%3E%3C/svg%3E';
     
     // Show rating if book has one (extract from tags)
     const rating = getRatingFromTags(book.tags);
@@ -944,7 +944,7 @@ function createBookCard(book) {
     const currentListTag = getBookListStatus(book) || 'to_read';
 
     div.innerHTML = `
-        <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'120\' fill=\'%232c2c2e\'%3E%3Crect width=\'80\' height=\'120\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'32\'%3E📖%3C/text%3E%3C/svg%3E'">
+        <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'120\' viewBox=\'0 0 80 120\'%3E%3Crect width=\'80\' height=\'120\' fill=\'%232c2c2e\'/%3E%3Crect x=\'20\' y=\'30\' width=\'40\' height=\'55\' fill=\'none\' stroke=\'%23636366\' stroke-width=\'2.5\' rx=\'3\'/%3E%3Cline x1=\'28\' y1=\'45\' x2=\'52\' y2=\'45\' stroke=\'%23636366\' stroke-width=\'2\'/%3E%3Cline x1=\'28\' y1=\'55\' x2=\'52\' y2=\'55\' stroke=\'%23636366\' stroke-width=\'2\'/%3E%3Cline x1=\'28\' y1=\'65\' x2=\'45\' y2=\'65\' stroke=\'%23636366\' stroke-width=\'2\'/%3E%3C/svg%3E'">
         <div class="book-card-content">
             <div class="book-card-header">
                 <div class="book-title">${book.title}</div>
@@ -1168,7 +1168,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
 
     const coverUrl = book.coverUrl 
         ? book.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" fill="%232c2c2e"%3E%3Crect width="200" height="300"/%3E%3Ctext x="50%25" y="50%25" fill="%23636366" text-anchor="middle" dy=".3em" font-size="64"%3E📖%3C/text%3E%3C/svg%3E';
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300"%3E%3Crect width="200" height="300" fill="%232c2c2e"/%3E%3Crect x="50" y="75" width="100" height="140" fill="none" stroke="%23636366" stroke-width="3" rx="4"/%3E%3Cline x1="65" y1="110" x2="135" y2="110" stroke="%23636366" stroke-width="2.5"/%3E%3Cline x1="65" y1="135" x2="135" y2="135" stroke="%23636366" stroke-width="2.5"/%3E%3Cline x1="65" y1="160" x2="120" y2="160" stroke="%23636366" stroke-width="2.5"/%3E%3C/svg%3E';
 
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
@@ -1300,7 +1300,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
     if (editMode) {
         content.innerHTML = `
             <div class="detail-cover-container">
-                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' fill=\'%232c2c2e\'%3E%3Crect width=\'200\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'64\'%3E📖%3C/text%3E%3C/svg%3E'">
+                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' viewBox=\'0 0 200 300\'%3E%3Crect width=\'200\' height=\'300\' fill=\'%232c2c2e\'/%3E%3Crect x=\'50\' y=\'75\' width=\'100\' height=\'140\' fill=\'none\' stroke=\'%23636366\' stroke-width=\'3\' rx=\'4\'/%3E%3Cline x1=\'65\' y1=\'110\' x2=\'135\' y2=\'110\' stroke=\'%23636366\' stroke-width=\'2.5\'/%3E%3Cline x1=\'65\' y1=\'135\' x2=\'135\' y2=\'135\' stroke=\'%23636366\' stroke-width=\'2.5\'/%3E%3Cline x1=\'65\' y1=\'160\' x2=\'120\' y2=\'160\' stroke=\'%23636366\' stroke-width=\'2.5\'/%3E%3C/svg%3E'">
                 <input type="text" class="edit-input" id="editCoverUrl" value="${book.coverUrl || ''}" placeholder="Cover URL">
             </div>
             <div class="detail-info">
@@ -1320,7 +1320,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
     } else {
         content.innerHTML = `
             <div class="detail-cover-container">
-                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' fill=\'%232c2c2e\'%3E%3Crect width=\'200\' height=\'300\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'64\'%3E📖%3C/text%3E%3C/svg%3E'">
+                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'300\' viewBox=\'0 0 200 300\'%3E%3Crect width=\'200\' height=\'300\' fill=\'%232c2c2e\'/%3E%3Crect x=\'50\' y=\'75\' width=\'100\' height=\'140\' fill=\'none\' stroke=\'%23636366\' stroke-width=\'3\' rx=\'4\'/%3E%3Cline x1=\'65\' y1=\'110\' x2=\'135\' y2=\'110\' stroke=\'%23636366\' stroke-width=\'2.5\'/%3E%3Cline x1=\'65\' y1=\'135\' x2=\'135\' y2=\'135\' stroke=\'%23636366\' stroke-width=\'2.5\'/%3E%3Cline x1=\'65\' y1=\'160\' x2=\'120\' y2=\'160\' stroke=\'%23636366\' stroke-width=\'2.5\'/%3E%3C/svg%3E'">
             </div>
             <div class="detail-info">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">

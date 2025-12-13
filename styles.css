@@ -1300,8 +1300,8 @@ body.keyboard-open .bottom-nav {
     }
 }
 
-/* Landscape mode - iPad and larger tablets */
-@media (min-width: 768px) and (orientation: landscape) {
+/* iPad and larger tablets - both orientations */
+@media (min-width: 768px) {
     .app {
         max-width: none;
     }

@@ -1252,6 +1252,13 @@ body.keyboard-open .bottom-nav {
 @media (max-height: 500px) and (orientation: landscape) {
     .app {
         max-width: none;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    .header {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
     }
     
     .header h1 {
@@ -1261,7 +1268,8 @@ body.keyboard-open .bottom-nav {
     
     .bottom-nav {
         display: flex !important;
-        padding: 4px 0;
+        max-width: none;
+        padding: 4px env(safe-area-inset-right) max(4px, env(safe-area-inset-bottom)) env(safe-area-inset-left);
     }
     
     .nav-item {

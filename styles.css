@@ -1275,6 +1275,14 @@ body.keyboard-open .bottom-nav {
         margin: -16px -16px 16px -16px;
     }
     
+    .book-card .book-title {
+        font-size: 17px;
+    }
+    
+    .book-card .book-author {
+        font-size: 15px;
+    }
+    
     .bottom-nav {
         display: flex !important;
         max-width: none;

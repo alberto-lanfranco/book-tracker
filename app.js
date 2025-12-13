@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.0.4';
+const APP_VERSION = '3.0.5';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -1482,6 +1482,9 @@ async function tsvToBooks(tsv) {
     // Legacy TSV format detected if startedAt/finishedAt columns are missing
     const needsMigration = !header.includes('startedAt') || !header.includes('finishedAt');
     
+    // Track if any fields needed sanitization (double quotes replaced)
+    let needsSanitization = false;
+    
     // Skip header line and parse book data
     const fetchPromises = [];
     
@@ -1498,7 +1501,9 @@ async function tsvToBooks(tsv) {
         // Sanitize text fields from TSV (replace double quotes with single quotes)
         const sanitizeField = (str) => {
             if (!str) return '';
-            return str.replace(/"/g, "'");
+            const sanitized = str.replace(/"/g, "'");
+            if (sanitized !== str) needsSanitization = true;
+            return sanitized;
         };
         
         const isbn = getValue('isbn');
@@ -1648,19 +1653,22 @@ async function tsvToBooks(tsv) {
     // Wait for all API calls to complete
     await Promise.all(fetchPromises);
     
-    // Check if any books need TSV update or if column order is wrong or needs migration
-    const needsUpdate = books.some(b => b._needsUpdate) || isWrongOrder || needsMigration;
+    // Check if any books need TSV update or if column order is wrong or needs migration or sanitization
+    const needsUpdate = books.some(b => b._needsUpdate) || isWrongOrder || needsMigration || needsSanitization;
     books.forEach(b => delete b._needsUpdate);
     
-    // Store flag to indicate TSV needs reordering/migration
+    // Store flag to indicate TSV needs reordering/migration/sanitization
     if (isWrongOrder) {
         console.log('TSV columns in wrong order - will be fixed on next sync');
     }
     if (needsMigration) {
         console.log('Legacy tag-based system detected - migrating to timestamp-based system');
     }
+    if (needsSanitization) {
+        console.log('Double quotes detected in TSV - sanitizing and will push fixed version');
+    }
     
-    return { books, needsReorder: isWrongOrder || needsMigration };
+    return { books, needsReorder: isWrongOrder || needsMigration || needsSanitization };
 }
 
 // Fetch paste from PasteMyst

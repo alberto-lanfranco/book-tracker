@@ -310,19 +310,23 @@ addedAt	startedAt	finishedAt	isbn	tags	title	author	year	coverUrl	description
 3. If token + gistId exist: `syncWithGitHub(false)`
 4. Fetches gist → `fetchGist(gistId)`
 5. Parses TSV → `tsvToBooks(tsvContent)`
+   - Sanitizes text fields (replaces `"` with `'`)
+   - Detects if sanitization was needed
 6. For each ISBN in TSV:
    - Check local cache first
    - If not cached, fetch book data from Google Books API
 7. Builds complete book objects with cloud data
 8. Updates state (cloud takes precedence)
-9. Updates UI
+9. If TSV needed fixing (column order, migration, or sanitization), pushes corrected version back to server
+10. Updates UI
 
 #### Manual Sync
 1. User clicks "Sync Now" button
 2. `syncWithGitHub(true)` with showStatus=true
 3. Shows "Syncing..." status message
-4. Fetches gist, parses, updates state
-5. Shows success/error status message
+4. Fetches gist, parses (with sanitization), updates state
+5. If TSV needed fixing, pushes corrected version back to server
+6. Shows success/error status message (indicates if fixes were applied)
 
 #### Push on Change
 1. Any book operation (add/move/delete/rate/tag/edit)
@@ -601,7 +605,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.0.4
+- **Current Version**: 3.0.5
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -622,7 +626,8 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
-- **3.0.4** (2025-12-13): Changed quote handling - double quotes (`"`) now replaced with single quotes (`'`) in TSV, applied to both new entries and pre-existing data, making `"` illegal in text fields
+- **3.0.5** (2025-12-13): Added automatic push of sanitized TSV when double quotes detected - tracks if sanitization occurred during parsing and automatically pushes fixed version back to server
+- **3.0.4** (2025-12-13): Changed quote handling - double quotes (`"`) now replaced with single quotes (`'`) in TSV, applied to both new entries and pre-existing data, making `"` illegal in text fields. When double quotes detected during sync, sanitized TSV is automatically pushed back to server.
 - **3.0.3** (2025-12-13): Properly implemented backslash-escaped quotes - `"` → `\"` when saving to TSV, `\"` → `"` when reading/displaying
 - **3.0.2** (2025-12-13): Fixed text field escaping - double quotes are now replaced with spaces (same as tabs/newlines) instead of using "" escaping
 - **3.0.1** (2025-12-13): Added double quote escaping in TSV export/import - quotes are now escaped as "" (two double quotes) in text fields, and unescaped when parsing to handle existing data correctly

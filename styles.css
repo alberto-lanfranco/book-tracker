@@ -1250,12 +1250,17 @@ body.keyboard-open .bottom-nav {
 
 /* Landscape mode */
 @media (max-height: 500px) and (orientation: landscape) {
+    .app {
+        max-width: none;
+    }
+    
     .header h1 {
         font-size: 24px;
         padding: 6px 20px 8px;
     }
     
     .bottom-nav {
+        display: flex !important;
         padding: 4px 0;
     }
     

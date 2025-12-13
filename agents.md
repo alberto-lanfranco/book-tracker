@@ -271,7 +271,8 @@ addedAt	startedAt	finishedAt	isbn	tags	title	author	year	coverUrl	description
   - **Column order enforcement**: Parser can read columns in any order, but exports enforce: addedAt, startedAt, finishedAt, isbn, tags, title, author, year, coverUrl, description
   - If wrong column order detected, TSV is automatically fixed on next sync
   - **Timestamp integrity checks**: Ensures addedAt ≤ startedAt ≤ finishedAt when parsing
-  - Text fields are escaped (tabs/newlines replaced with spaces)
+  - **Text field escaping**: Double quotes are escaped as "" (two double quotes), tabs and newlines replaced with spaces
+  - **Text field unescaping**: When parsing, "" is converted back to " (single double quote)
 - **Legacy Migration** (v3.0.0+): 
   - Automatically detects old tag-based list system (to_read, reading, read tags)
   - Converts tags to timestamps: to_read books unchanged, reading books copy addedAt to startedAt, read books copy addedAt to all three timestamps
@@ -597,7 +598,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.0.0
+- **Current Version**: 3.0.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -618,6 +619,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.0.1** (2025-12-13): Added double quote escaping in TSV export/import - quotes are now escaped as "" (two double quotes) in text fields, and unescaped when parsing to handle existing data correctly
 - **3.0.0** (2025-12-13): **BREAKING CHANGE** - Migrated from tag-based list tracking to timestamp-based columns (addedAt, startedAt, finishedAt). Books now determine list status from timestamps instead of tags. Added dynamic sort options (Started At for Reading/Read lists, Finished At for Read list). Includes automatic migration from legacy tag system. Updated TSV format with new timestamp columns at start.
 - **2.11.1** (2025-12-12): Fixed modal closing bug, moved toast notifications to safe area (above notch), increased toast duration to 4 seconds
 - **2.11.0** (2025-12-12): Fixed search detail modal - buttons now show active state for existing books, clicking buttons adds/changes list without closing modal

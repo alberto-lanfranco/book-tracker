@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.0.3';
+const APP_VERSION = '3.0.4';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -1431,10 +1431,10 @@ function booksToTSV() {
         // Only sync books that have ISBN
         if (book.isbn) {
             const tags = book.tags && book.tags.length > 0 ? book.tags.join(',') : '';
-            // Escape tabs, newlines, and double quotes in text fields
+            // Sanitize text fields: replace illegal characters
             const escapeField = (str) => {
                 if (!str) return '';
-                return String(str).replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '').replace(/"/g, '\\"');
+                return String(str).replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '').replace(/"/g, "'");
             };
             const row = [
                 book.addedAt || '',
@@ -1495,19 +1495,19 @@ async function tsvToBooks(tsv) {
             return idx !== undefined ? (cols[idx] || '').trim() : '';
         };
         
-        // Unescape double quotes in text fields when reading from TSV
-        const unescapeField = (str) => {
+        // Sanitize text fields from TSV (replace double quotes with single quotes)
+        const sanitizeField = (str) => {
             if (!str) return '';
-            return str.replace(/\\"/g, '"');
+            return str.replace(/"/g, "'");
         };
         
         const isbn = getValue('isbn');
         if (!isbn) continue; // Skip rows without ISBN
         
-        const title = unescapeField(getValue('title'));
-        const author = unescapeField(getValue('author'));
+        const title = sanitizeField(getValue('title'));
+        const author = sanitizeField(getValue('author'));
         const year = getValue('year');
-        const description = unescapeField(getValue('description'));
+        const description = sanitizeField(getValue('description'));
         const coverUrl = getValue('coverUrl');
         const tagsStr = getValue('tags');
         let addedAt = getValue('addedAt');

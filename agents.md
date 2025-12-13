@@ -34,9 +34,9 @@ book-tracker/
 ```javascript
 state = {
     books: [],                 // Unified array of all books
-    filterTags: [],           // Active filter tags for Books view
+    filterTags: [],           // Active filter tags for Books view (includes list filters: to_read, reading, read)
     searchQuery: '',          // Search query for filtering books
-    sortBy: 'dateAdded',      // Sort field: dateAdded, title, author, year, rating
+    sortBy: 'dateAdded',      // Sort field: dateAdded, startedAt, finishedAt, title, author, year, rating
     sortOrder: 'desc',        // Sort order: asc, desc
     settings: {
         gistId: '',
@@ -57,10 +57,21 @@ state = {
     coverUrl: string,     // Google Books thumbnail URL
     isbn: string,         // Optional
     description: string,  // Optional, HTML may be present
-    tags: string[],       // User-defined tags, list status (to_read/reading/read), and rating (01_stars to 10_stars)
-    addedAt: string       // ISO 8601 timestamp of when book was added to current list
+    tags: string[],       // User-defined tags and rating (01_stars to 10_stars)
+    addedAt: string,      // ISO 8601 timestamp of when book was added to To Read list
+    startedAt: string,    // ISO 8601 timestamp of when book was moved to Reading list (null if not started)
+    finishedAt: string    // ISO 8601 timestamp of when book was moved to Read list (null if not finished)
 }
 ```
+
+**List Status Determination**: Books are now organized into lists based on timestamps rather than tags:
+- **To Read**: `addedAt` is set, `startedAt` and `finishedAt` are null
+- **Reading**: `startedAt` is set, `finishedAt` is null
+- **Read**: `finishedAt` is set
+
+**Timestamp Integrity**: When setting timestamps, the system enforces:
+- `addedAt` ≤ `startedAt` ≤ `finishedAt`
+- If integrity check fails, earlier timestamps are copied from later ones
 
 ## API Integration
 
@@ -180,14 +191,15 @@ Body: {
     - Can combine one list tag + one manual tag
     - Tap active tag to deselect (show all)
 - **Sort Controls** (in header):
-  - Dropdown to select sort field: Date Added (default), Title, Author, Year, Rating
+  - Dropdown to select sort field: Date Added (default), Title, Author, Year, Rating, Started At, Finished At
+  - **Dynamic sort options**: Started At only shown for Reading and Read lists, Finished At only shown for Read list
   - Toggle button (↑/↓) to switch between ascending/descending order
   - Preferences persist in localStorage between sessions
 - Books displayed as cards with:
   - Cover image (80x120px)
   - Title, author, year
-  - Rating (⭐ X/10) - displayed only for books with Read tag
-  - Tags (colored badges) - list status tags hidden from display
+  - Rating (⭐ X/10) - displayed only for books with Read status (finishedAt is set)
+  - Tags (colored badges) - rating tags hidden from display
   - Three list status icons (current one highlighted/active)
   - Delete button (far right)
 - Tap card to open detail modal
@@ -212,7 +224,7 @@ Body: {
   - Add tags by typing and pressing Enter
   - Remove tags by clicking × button
   - Tags displayed as pills with remove button
-- **Rating input** (10 tappable stars) - shown only for books with Read tag
+- **Rating input** (10 tappable stars) - shown only for books with Read status (finishedAt is set)
 - **From search**: Shows 3 list buttons with labels (To Read, Reading, Read) to add book
 - **From list**: Shows 3 list buttons (current highlighted) + delete button + edit button
 - Click outside or X button to close
@@ -230,34 +242,41 @@ Body: {
 
 #### TSV Structure
 ```tsv
-addedAt	isbn	tags	title	author	year	coverUrl	description
-2025-12-08T10:30:00.000Z	9780547928227	to_read,fantasy,classic	The Hobbit	J.R.R. Tolkien	1937	https://...	A fantasy novel about...
-2025-12-07T15:45:00.000Z	9780451524935	reading,dystopian,scifi	1984	George Orwell	1949	https://...	Dystopian social...
-2025-12-06T20:15:00.000Z	9780441013593	read,09_stars,scifi,epic	Dune	Frank Herbert	1965	https://...	Science fiction novel...
+addedAt	startedAt	finishedAt	isbn	tags	title	author	year	coverUrl	description
+2025-12-08T10:30:00.000Z			9780547928227	fantasy,classic	The Hobbit	J.R.R. Tolkien	1937	https://...	A fantasy novel about...
+2025-12-07T15:45:00.000Z	2025-12-08T09:00:00.000Z		9780451524935	dystopian,scifi	1984	George Orwell	1949	https://...	Dystopian social...
+2025-12-06T20:15:00.000Z	2025-12-07T10:00:00.000Z	2025-12-08T14:30:00.000Z	9780441013593	09_stars,scifi,epic	Dune	Frank Herbert	1965	https://...	Science fiction novel...
 ```
-- **Columns** (enforced order): addedAt, isbn, tags, title, author, year, coverUrl, description
+- **Columns** (enforced order): addedAt, startedAt, finishedAt, isbn, tags, title, author, year, coverUrl, description
 - **Delimiter**: Tab character (\t)
 - **Encoding**: UTF-8
 - **Data Model**: **Denormalized** - TSV stores complete book metadata to allow user editing
+  - **addedAt**: ISO 8601 timestamp of when book was added to To Read list (required)
+  - **startedAt**: ISO 8601 timestamp of when book was moved to Reading list (empty for To Read books)
+  - **finishedAt**: ISO 8601 timestamp of when book was moved to Read list (empty for To Read and Reading books)
   - **isbn**: ISBN identifier (required)
+  - **tags**: Comma-separated list including:
+    - Rating: `01_stars` to `10_stars` (optional, only one, typically for books with Read status)
+    - Custom tags: Any user-defined tags
   - **title**: Book title (editable by user)
   - **author**: Author name(s) (editable by user)
   - **year**: Publication year (editable by user)
-  - **description**: Full book description (editable by user)
   - **coverUrl**: URL to book cover image (editable by user)
-  - **tags**: Comma-separated list including:
-    - List status: `to_read`, `reading`, or `read` (required, only one)
-    - Rating: `01_stars` to `10_stars` (optional, only one, typically for books with `read` tag)
-    - Custom tags: Any user-defined tags
-  - **addedAt**: ISO 8601 timestamp of when book was added to current list (updates when moved)
+  - **description**: Full book description (editable by user)
 - **Parse Strategy**: 
   - TSV values take precedence over API values
   - If any denormalized field (title, author, year, description, coverUrl) is missing, fetch from Google Books API
   - API values are only used to fill missing fields; existing TSV values are preserved
   - Automatically adds missing columns to support backward compatibility
-  - **Column order enforcement**: Parser can read columns in any order, but exports enforce: addedAt, isbn, tags, title, author, year, coverUrl, description
+  - **Column order enforcement**: Parser can read columns in any order, but exports enforce: addedAt, startedAt, finishedAt, isbn, tags, title, author, year, coverUrl, description
   - If wrong column order detected, TSV is automatically fixed on next sync
+  - **Timestamp integrity checks**: Ensures addedAt ≤ startedAt ≤ finishedAt when parsing
   - Text fields are escaped (tabs/newlines replaced with spaces)
+- **Legacy Migration** (v3.0.0+): 
+  - Automatically detects old tag-based list system (to_read, reading, read tags)
+  - Converts tags to timestamps: to_read books unchanged, reading books copy addedAt to startedAt, read books copy addedAt to all three timestamps
+  - Removes list status tags from tags array
+  - **Note**: This migration logic will be removed in v4.0.0
 
 #### Local Storage (Cache)
 - localStorage key: `bookTrackerData`
@@ -305,7 +324,7 @@ addedAt	isbn	tags	title	author	year	coverUrl	description
 1. Any book operation (add/move/delete/rate/tag/edit)
 2. `saveToLocalStorage()` called (caches full book data locally)
 3. Automatically calls `pushToGitHub()`
-4. Converts books to denormalized TSV → `booksToTSV()` (isbn, title, author, year, description, coverUrl, tags, addedAt)
+4. Converts books to denormalized TSV → `booksToTSV()` (addedAt, startedAt, finishedAt, isbn, tags, title, author, year, coverUrl, description)
 5. Updates gist → `updateGist(gistId, tsvContent)`
 6. Silent push (no UI status shown)
 7. Note: Only books with ISBN are synced to cloud
@@ -313,13 +332,17 @@ addedAt	isbn	tags	title	author	year	coverUrl	description
 ### 6. Sorting
 - **Sort Options**:
   - Date Added (default): Sorts by addedAt timestamp
+  - Started At: Sorts by startedAt timestamp (only shown for Reading and Read lists)
+  - Finished At: Sorts by finishedAt timestamp (only shown for Read list)
   - Title: Alphabetical by book title
   - Author: Alphabetical by author name
   - Year: By publication year
-  - Rating: By star rating (1-10, only shown when viewing Read list)
+  - Rating: By star rating (1-10)
+- **Dynamic Options**: Sort dropdown updates based on active list filter
 - **Sort Order**: Ascending (↑) or Descending (↓), toggle with button
 - **Persistence**: Sort preferences saved to localStorage key `bookTrackerSort`
 - **Implementation**:
+  - `updateSortOptions()`: Dynamically updates dropdown based on active filter
   - `sortBooks(books)`: Compares books based on state.sortBy and state.sortOrder
   - `renderBooks()`: Automatically applies sorting before displaying books
   - Event listeners update state and re-render on sort control changes
@@ -410,10 +433,11 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 #### From Search Results
 1. Search result click → `addBookToList(book, listTag)`
 2. Check for duplicates by ID
-3. Add book to `state.books[]` array with listTag in tags
-4. Save to localStorage
-5. Render books
-6. Show toast notification
+3. Set timestamps using `setListTimestamps(book, listTag)` based on selected list
+4. Add book to `state.books[]` array
+5. Save to localStorage
+6. Render books
+7. Show toast notification
 
 #### Manual Entry
 1. Click "Add manually" button (bottom of search results or when no results)
@@ -431,16 +455,17 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 5. Click "Save Book" button at bottom
 6. Validates required fields (title, author, list selection)
 7. Creates book object with `id: isbn || 'manual_${timestamp}'`
-8. Adds to state.books array
-9. Saves to localStorage (triggers cloud sync if ISBN present)
-10. Shows toast notification with ISBN warning if no ISBN
-11. Closes modal and clears search
+8. Sets timestamps using `setListTimestamps(book, listTag)`
+9. Adds to state.books array
+10. Saves to localStorage (triggers cloud sync if ISBN present)
+11. Shows toast notification with ISBN warning if no ISBN
+12. Closes modal and clears search
 
 ### Changing Book List Status
 1. Click non-active list icon
 2. `changeBookListStatus(bookId, newListTag)`
-3. Find book, remove old list tag, add new list tag
-4. Update addedAt timestamp
+3. Find book and update timestamps using `setListTimestamps(book, newListTag)`
+4. Integrity checks ensure: addedAt ≤ startedAt ≤ finishedAt
 5. Save to localStorage
 6. Render books
 7. Show toast notification
@@ -572,7 +597,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 2.11.1
+- **Current Version**: 3.0.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -593,6 +618,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.0.0** (2025-12-13): **BREAKING CHANGE** - Migrated from tag-based list tracking to timestamp-based columns (addedAt, startedAt, finishedAt). Books now determine list status from timestamps instead of tags. Added dynamic sort options (Started At for Reading/Read lists, Finished At for Read list). Includes automatic migration from legacy tag system. Updated TSV format with new timestamp columns at start.
 - **2.11.1** (2025-12-12): Fixed modal closing bug, moved toast notifications to safe area (above notch), increased toast duration to 4 seconds
 - **2.11.0** (2025-12-12): Fixed search detail modal - buttons now show active state for existing books, clicking buttons adds/changes list without closing modal
 - **2.10.0** (2025-12-12): Reduced button label spacing, added dismiss buttons to all alerts/banners (no auto-hide)

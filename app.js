@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '2.11.1';
+const APP_VERSION = '3.0.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -19,6 +19,47 @@ function setRatingTag(tags, rating) {
         tagsWithoutRating.push(ratingTag);
     }
     return tagsWithoutRating;
+}
+
+// Helper functions for determining book list status from timestamps
+function getBookListStatus(book) {
+    if (book.finishedAt) return 'read';
+    if (book.startedAt) return 'reading';
+    if (book.addedAt) return 'to_read';
+    return null;
+}
+
+// Ensure timestamp integrity when setting list status
+function setListTimestamps(book, listStatus) {
+    const now = new Date().toISOString();
+    
+    if (listStatus === 'to_read') {
+        book.addedAt = now;
+        book.startedAt = null;
+        book.finishedAt = null;
+    } else if (listStatus === 'reading') {
+        book.startedAt = now;
+        book.finishedAt = null;
+        
+        // Integrity check: ensure addedAt is present and before startedAt
+        if (!book.addedAt || book.addedAt > book.startedAt) {
+            book.addedAt = book.startedAt;
+        }
+    } else if (listStatus === 'read') {
+        book.finishedAt = now;
+        
+        // Integrity check: ensure startedAt is present and before finishedAt
+        if (!book.startedAt || book.startedAt > book.finishedAt) {
+            book.startedAt = book.finishedAt;
+        }
+        
+        // Integrity check: ensure addedAt is present and before startedAt
+        if (!book.addedAt || book.addedAt > book.startedAt) {
+            book.addedAt = book.startedAt;
+        }
+    }
+    
+    return book;
 }
 
 // Register service worker with update detection
@@ -520,7 +561,7 @@ function createSearchResultItem(book) {
         b.id === book.id || 
         (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
     );
-    const currentListTag = existingBook ? existingBook.tags.find(t => ['to_read', 'reading', 'read'].includes(t)) : null;
+    const currentListTag = existingBook ? getBookListStatus(existingBook) : null;
 
     div.innerHTML = `
         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'60\\' height=\\'90\\' fill=\\'%232c2c2e\\'%3E%3Crect width=\\'60\\' height=\\'90\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' fill=\\'%238e8e93\\' text-anchor=\\'middle\\' dy=\\'.3em\\' font-size=\\'24\\'%3E📖%3C/text%3E%3C/svg%3E'">
@@ -556,14 +597,11 @@ function addBookToList(book, listTag, keepSearchOpen = false) {
         return;
     }
 
-    // Initialize tags array and add list status tag
+    // Initialize tags array (for rating and custom tags only)
     book.tags = book.tags || [];
-    if (!book.tags.includes(listTag)) {
-        book.tags.push(listTag);
-    }
     
-    // Set addedAt timestamp
-    book.addedAt = new Date().toISOString();
+    // Set timestamps based on list status
+    setListTimestamps(book, listTag);
     
     state.books.push(book);
     saveToLocalStorage();
@@ -623,16 +661,12 @@ function removeBook(bookId) {
 }
 
 // Move book to different list
-// Change book list status by updating tags
+// Change book list status by updating timestamps
 function changeBookListStatus(bookId, newListTag) {
     const book = state.books.find(b => b.id === bookId);
     if (book) {
-        // Remove old list tags
-        book.tags = book.tags.filter(t => !['to_read', 'reading', 'read'].includes(t));
-        // Add new list tag
-        book.tags.push(newListTag);
-        // Update timestamp
-        book.addedAt = new Date().toISOString();
+        // Set timestamps based on new list status
+        setListTimestamps(book, newListTag);
         saveToLocalStorage();
         renderBooks();
         showToast('Book status updated!');
@@ -720,6 +754,14 @@ function sortBooks(books) {
                 aVal = getRatingFromTags(a.tags) || 0;
                 bVal = getRatingFromTags(b.tags) || 0;
                 break;
+            case 'startedAt':
+                aVal = a.startedAt || '';
+                bVal = b.startedAt || '';
+                break;
+            case 'finishedAt':
+                aVal = a.finishedAt || '';
+                bVal = b.finishedAt || '';
+                break;
             case 'dateAdded':
             default:
                 aVal = a.addedAt || '';
@@ -735,20 +777,62 @@ function sortBooks(books) {
     return sorted;
 }
 
+// Update sort options based on active list filter
+function updateSortOptions() {
+    const sortBySelect = document.getElementById('sortBy');
+    if (!sortBySelect) return;
+    
+    // Determine active list filter
+    const activeListFilter = state.filterTags.find(tag => ['to_read', 'reading', 'read'].includes(tag));
+    
+    // Get current options
+    const currentValue = sortBySelect.value;
+    
+    // Build options based on active filter
+    let optionsHTML = `
+        <option value="dateAdded">Date Added</option>
+        <option value="title">Title</option>
+        <option value="author">Author</option>
+        <option value="year">Year</option>
+        <option value="rating">Rating</option>
+    `;
+    
+    // Add "Started At" for reading and read lists
+    if (activeListFilter === 'reading' || activeListFilter === 'read') {
+        optionsHTML += `<option value="startedAt">Started At</option>`;
+    }
+    
+    // Add "Finished At" for read list only
+    if (activeListFilter === 'read') {
+        optionsHTML += `<option value="finishedAt">Finished At</option>`;
+    }
+    
+    sortBySelect.innerHTML = optionsHTML;
+    
+    // Restore previous value if it's still available, otherwise reset to dateAdded
+    const availableValues = Array.from(sortBySelect.options).map(opt => opt.value);
+    if (availableValues.includes(currentValue)) {
+        sortBySelect.value = currentValue;
+        state.sortBy = currentValue;
+    } else {
+        sortBySelect.value = 'dateAdded';
+        state.sortBy = 'dateAdded';
+    }
+}
+
 // Render tag filters
 function renderTagFilters() {
     const tagFiltersContainer = document.getElementById('tagFilters');
     if (!tagFiltersContainer) return;
     
-    // Get all unique manual tags (excluding list status tags and rating tags)
-    const listStatusTags = ['to_read', 'reading', 'read'];
+    // Get all unique manual tags (excluding rating tags)
     const manualTags = new Set();
     
     state.books.forEach(book => {
         if (book.tags) {
             book.tags.forEach(tag => {
-                // Exclude list status tags and rating tags (01_stars to 10_stars)
-                if (!listStatusTags.includes(tag) && !tag.match(/^\d{2}_stars$/)) {
+                // Exclude rating tags (01_stars to 10_stars)
+                if (!tag.match(/^\d{2}_stars$/)) {
                     manualTags.add(tag);
                 }
             });
@@ -761,7 +845,7 @@ function renderTagFilters() {
     // Build HTML
     let html = '';
     
-    // List status tags (always shown first)
+    // List status filters (always shown first)
     html += `<button class="tag-filter ${state.filterTags.includes('to_read') ? 'active' : ''}" data-tag="to_read">To Read</button>`;
     html += `<button class="tag-filter ${state.filterTags.includes('reading') ? 'active' : ''}" data-tag="reading">Reading</button>`;
     html += `<button class="tag-filter ${state.filterTags.includes('read') ? 'active' : ''}" data-tag="read">Read</button>`;
@@ -786,14 +870,24 @@ function renderBooks() {
     // Render tag filters
     renderTagFilters();
     
+    // Update sort dropdown options based on active filter
+    updateSortOptions();
+    
     // Apply filters
     let filteredBooks = state.books;
     
     // Filter by selected tags (must match ALL selected tags)
     if (state.filterTags.length > 0) {
-        filteredBooks = filteredBooks.filter(book => 
-            state.filterTags.every(tag => book.tags && book.tags.includes(tag))
-        );
+        filteredBooks = filteredBooks.filter(book => {
+            return state.filterTags.every(tag => {
+                // Handle list status tags differently (based on timestamps)
+                if (tag === 'to_read' || tag === 'reading' || tag === 'read') {
+                    return getBookListStatus(book) === tag;
+                }
+                // Handle regular tags
+                return book.tags && book.tags.includes(tag);
+            });
+        });
     }
     
     // Filter by search query
@@ -838,17 +932,16 @@ function createBookCard(book) {
         ? `<div class="book-rating">⭐ ${rating}/10</div>` 
         : '';
     
-    // Show tags (filter out list status tags and rating tags from display)
+    // Show tags (filter out rating tags from display)
     const displayTags = book.tags ? book.tags.filter(t => 
-        !['to_read', 'reading', 'read'].includes(t) && 
         !t.match(/^\d{2}_stars$/)
     ) : [];
     const tags = displayTags.length > 0 
         ? `<div class="book-tags">${displayTags.map(tag => `<span class="tag-badge">${tag}</span>`).join('')}</div>` 
         : '';
     
-    // Get current list status
-    const currentListTag = book.tags?.find(t => ['to_read', 'reading', 'read'].includes(t)) || 'to_read';
+    // Get current list status from timestamps
+    const currentListTag = getBookListStatus(book) || 'to_read';
 
     div.innerHTML = `
         <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'120\' fill=\'%232c2c2e\'%3E%3Crect width=\'80\' height=\'120\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23636366\' text-anchor=\'middle\' dy=\'.3em\' font-size=\'32\'%3E📖%3C/text%3E%3C/svg%3E'">
@@ -1021,9 +1114,11 @@ function showManualEntryModal() {
             isbn: isbn,
             description: description,
             coverUrl: coverUrl,
-            tags: [selectedList],
-            addedAt: new Date().toISOString()
+            tags: []
         };
+        
+        // Set timestamps based on selected list
+        setListTimestamps(manualBook, selectedList);
         
         // Warn if no ISBN
         if (!isbn) {
@@ -1076,12 +1171,11 @@ function showBookDetail(book, source = 'list', editMode = false) {
             : `<button class="btn btn-small" data-action="edit" data-book-id="${book.id}">✏️ Edit</button>`;
     }
 
-    // Show tags section for books in lists (filter out list status tags and rating tags)
+    // Show tags section for books in lists (filter out rating tags)
     let tagsSection = '';
     if (source === 'list') {
         const allTags = book.tags || [];
         const displayTags = allTags.filter(tag => 
-            !['to_read', 'reading', 'read'].includes(tag) && 
             !tag.match(/^\d{2}_stars$/)
         );
         const tagPills = displayTags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
@@ -1096,9 +1190,9 @@ function showBookDetail(book, source = 'list', editMode = false) {
         `;
     }
 
-    // Show rating input for books with Read tag
+    // Show rating input for books with Read status (finishedAt is set)
     let ratingSection = '';
-    const hasReadTag = book.tags && book.tags.includes('read');
+    const hasReadTag = book.finishedAt;
     if (source === 'list' && hasReadTag) {
         const currentRating = getRatingFromTags(book.tags) || 0;
         let stars = '';
@@ -1122,7 +1216,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
             b.id === book.id || 
             (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
         );
-        const currentListTag = existingBook ? existingBook.tags.find(t => ['to_read', 'reading', 'read'].includes(t)) : null;
+        const currentListTag = existingBook ? getBookListStatus(existingBook) : null;
         
         listActions = `
             <div class="detail-actions">
@@ -1156,8 +1250,8 @@ function showBookDetail(book, source = 'list', editMode = false) {
         `;
     } else {
         // Show list status and delete buttons for books in lists
-        // Determine current list tag
-        const currentTag = book.tags.find(tag => ['to_read', 'reading', 'read'].includes(tag)) || 'to_read';
+        // Determine current list status from timestamps
+        const currentTag = getBookListStatus(book) || 'to_read';
         
         const icons = {
             to_read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
@@ -1329,10 +1423,9 @@ function closeBookDetail() {
 // ===== PASTEMYST SYNC FUNCTIONS =====
 
 // Convert books to TSV format (denormalized: all fields stored)
-// Tags now include list status (to_read, reading, read)
-// Column order: addedAt, isbn, tags, title, author, year, coverUrl, description
+// Column order: addedAt, startedAt, finishedAt, isbn, tags, title, author, year, coverUrl, description
 function booksToTSV() {
-    const lines = ['addedAt\tisbn\ttags\ttitle\tauthor\tyear\tcoverUrl\tdescription'];
+    const lines = ['addedAt\tstartedAt\tfinishedAt\tisbn\ttags\ttitle\tauthor\tyear\tcoverUrl\tdescription'];
     
     state.books.forEach(book => {
         // Only sync books that have ISBN
@@ -1345,6 +1438,8 @@ function booksToTSV() {
             };
             const row = [
                 book.addedAt || '',
+                book.startedAt || '',
+                book.finishedAt || '',
                 book.isbn || '',
                 tags,
                 escapeField(book.title),
@@ -1361,7 +1456,7 @@ function booksToTSV() {
 }
 
 // Parse TSV to books (use TSV data first, fallback to API if fields missing)
-// Expected column order: addedAt, isbn, tags, title, author, year, coverUrl, description
+// Expected column order: addedAt, startedAt, finishedAt, isbn, tags, title, author, year, coverUrl, description
 async function tsvToBooks(tsv) {
     const lines = tsv.trim().split('\n');
     if (lines.length < 1) return [];
@@ -1376,11 +1471,16 @@ async function tsvToBooks(tsv) {
     });
     
     // Expected column order (enforced)
-    const expectedColumnOrder = ['addedAt', 'isbn', 'tags', 'title', 'author', 'year', 'coverUrl', 'description'];
+    const expectedColumnOrder = ['addedAt', 'startedAt', 'finishedAt', 'isbn', 'tags', 'title', 'author', 'year', 'coverUrl', 'description'];
     
     // Check if columns are in wrong order
     const actualOrder = header.map(col => col.trim());
     const isWrongOrder = !expectedColumnOrder.every((col, idx) => actualOrder[idx] === col);
+    
+    // Check if we need to migrate from legacy tag-based system
+    // MIGRATION: TODO - Remove in next major version (v4.0.0)
+    // Legacy TSV format detected if startedAt/finishedAt columns are missing
+    const needsMigration = !header.includes('startedAt') || !header.includes('finishedAt');
     
     // Skip header line and parse book data
     const fetchPromises = [];
@@ -1404,9 +1504,51 @@ async function tsvToBooks(tsv) {
         const description = getValue('description');
         const coverUrl = getValue('coverUrl');
         const tagsStr = getValue('tags');
-        const addedAt = getValue('addedAt');
+        let addedAt = getValue('addedAt');
+        let startedAt = getValue('startedAt');
+        let finishedAt = getValue('finishedAt');
         
-        const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
+        let tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
+        
+        // MIGRATION: Convert legacy tag-based list status to timestamps
+        // TODO - Remove in next major version (v4.0.0)
+        if (needsMigration) {
+            const listTag = tags.find(t => ['to_read', 'reading', 'read'].includes(t));
+            if (listTag === 'to_read') {
+                // No migration needed - addedAt is already set
+                startedAt = '';
+                finishedAt = '';
+            } else if (listTag === 'reading') {
+                // Use addedAt as startedAt since we don't know when it was started
+                startedAt = addedAt;
+                finishedAt = '';
+            } else if (listTag === 'read') {
+                // Copy addedAt to all three timestamps
+                startedAt = addedAt;
+                finishedAt = addedAt;
+            }
+            // Remove list status tags from tags array
+            tags = tags.filter(t => !['to_read', 'reading', 'read'].includes(t));
+        }
+        
+        // Perform timestamp integrity checks
+        if (startedAt) {
+            // Ensure addedAt is present and before startedAt
+            if (!addedAt || addedAt > startedAt) {
+                addedAt = startedAt;
+            }
+        }
+        
+        if (finishedAt) {
+            // Ensure startedAt is present and before finishedAt
+            if (!startedAt || startedAt > finishedAt) {
+                startedAt = finishedAt;
+            }
+            // Ensure addedAt is present and before startedAt
+            if (!addedAt || addedAt > startedAt) {
+                addedAt = startedAt;
+            }
+        }
         
         // Check if we need to fetch data from API (any denormalized field missing)
         const needsAPIFetch = !title || !author || !year || !description || !coverUrl;
@@ -1423,7 +1565,9 @@ async function tsvToBooks(tsv) {
                 description: description || null,
                 coverUrl: coverUrl || null,
                 tags: tags,
-                addedAt: addedAt || null
+                addedAt: addedAt || null,
+                startedAt: startedAt || null,
+                finishedAt: finishedAt || null
             };
             books.push(book);
         } else {
@@ -1446,7 +1590,9 @@ async function tsvToBooks(tsv) {
                                 description: description || volumeInfo.description || null,
                                 coverUrl: coverUrl || getBestCoverUrl(volumeInfo.imageLinks) || null,
                                 tags: tags,
-                                addedAt: addedAt || null
+                                addedAt: addedAt || null,
+                                startedAt: startedAt || null,
+                                finishedAt: finishedAt || null
                             };
                             
                             books.push(book);
@@ -1464,7 +1610,9 @@ async function tsvToBooks(tsv) {
                                 description: description || null,
                                 coverUrl: coverUrl || null,
                                 tags: tags,
-                                addedAt: addedAt || null
+                                addedAt: addedAt || null,
+                                startedAt: startedAt || null,
+                                finishedAt: finishedAt || null
                             };
                             books.push(book);
                         }
@@ -1481,7 +1629,9 @@ async function tsvToBooks(tsv) {
                             description: description || null,
                             coverUrl: coverUrl || null,
                             tags: tags,
-                            addedAt: addedAt || null
+                            addedAt: addedAt || null,
+                            startedAt: startedAt || null,
+                            finishedAt: finishedAt || null
                         };
                         books.push(book);
                     })
@@ -1492,16 +1642,19 @@ async function tsvToBooks(tsv) {
     // Wait for all API calls to complete
     await Promise.all(fetchPromises);
     
-    // Check if any books need TSV update or if column order is wrong
-    const needsUpdate = books.some(b => b._needsUpdate) || isWrongOrder;
+    // Check if any books need TSV update or if column order is wrong or needs migration
+    const needsUpdate = books.some(b => b._needsUpdate) || isWrongOrder || needsMigration;
     books.forEach(b => delete b._needsUpdate);
     
-    // Store flag to indicate TSV needs reordering
+    // Store flag to indicate TSV needs reordering/migration
     if (isWrongOrder) {
         console.log('TSV columns in wrong order - will be fixed on next sync');
     }
+    if (needsMigration) {
+        console.log('Legacy tag-based system detected - migrating to timestamp-based system');
+    }
     
-    return { books, needsReorder: isWrongOrder };
+    return { books, needsReorder: isWrongOrder || needsMigration };
 }
 
 // Fetch paste from PasteMyst

@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.1.4';
+const APP_VERSION = '3.1.5';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -1173,13 +1173,11 @@ function showBookDetail(book, source = 'list', editMode = false) {
     const description = book.description || 'No description available.';
     const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
 
-    // Edit button for books in lists
+    // Edit button for books in lists (only shown in edit mode for save/cancel)
     let editButton = '';
-    if (source === 'list') {
-        editButton = editMode 
-            ? `<button class="btn btn-small" data-action="save-edit" data-book-id="${book.id}">Save</button>
-               <button class="btn btn-small" data-action="cancel-edit" data-book-id="${book.id}">Cancel</button>`
-            : `<button class="btn btn-small" data-action="edit" data-book-id="${book.id}">✏️ Edit</button>`;
+    if (source === 'list' && editMode) {
+        editButton = `<button class="btn btn-small" data-action="save-edit" data-book-id="${book.id}">Save</button>
+               <button class="btn btn-small" data-action="cancel-edit" data-book-id="${book.id}">Cancel</button>`;
     }
 
     // Show tags section for books in lists (filter out rating tags)
@@ -1286,6 +1284,12 @@ function showBookDetail(book, source = 'list', editMode = false) {
         listActions = `
             <div class="detail-actions">
                 ${buttons}
+                <button class="btn btn-icon" data-action="edit" data-book-id="${book.id}" title="Edit">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
                 <button class="btn btn-icon btn-danger" data-action="delete" data-book-id="${book.id}" title="Remove">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
@@ -1323,10 +1327,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
                 <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgMjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSI1MCIgeT0iNzUiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMyIgcng9IjQiLz48bGluZSB4MT0iNjUiIHkxPSIxMTAiIHgyPSIxMzUiIHkyPSIxMTAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxMzUiIHgyPSIxMzUiIHkyPSIxMzUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxNjAiIHgyPSIxMjAiIHkyPSIxNjAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48L3N2Zz4='">
             </div>
             <div class="detail-info">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-                    <h2 class="detail-title">${book.title}</h2>
-                    ${editButton}
-                </div>
+                <h2 class="detail-title">${book.title}</h2>
                 <div class="detail-author">${book.author}</div>
                 <div class="detail-year">${book.year}</div>
                 ${isbn}

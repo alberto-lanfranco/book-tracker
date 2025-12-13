@@ -607,7 +607,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.1.4
+- **Current Version**: 3.1.5
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -628,6 +628,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.1.5** (2025-12-13): Moved edit button to action bar as icon-only button next to delete button
 - **3.1.4** (2025-12-13): Fixed placeholder SVG by switching to base64 encoding for better cross-browser compatibility
 - **3.1.3** (2025-12-13): Replaced emoji-based placeholder with geometric book icon (lines and rectangle) for better browser compatibility
 - **3.1.2** (2025-12-13): Fixed duplicate rect element in search result placeholder SVG

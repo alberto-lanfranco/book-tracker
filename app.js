@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.0.2';
+const APP_VERSION = '3.0.3';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -1434,7 +1434,7 @@ function booksToTSV() {
             // Escape tabs, newlines, and double quotes in text fields
             const escapeField = (str) => {
                 if (!str) return '';
-                return String(str).replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '').replace(/"/g, ' ');
+                return String(str).replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '').replace(/"/g, '\\"');
             };
             const row = [
                 book.addedAt || '',
@@ -1495,13 +1495,19 @@ async function tsvToBooks(tsv) {
             return idx !== undefined ? (cols[idx] || '').trim() : '';
         };
         
+        // Unescape double quotes in text fields when reading from TSV
+        const unescapeField = (str) => {
+            if (!str) return '';
+            return str.replace(/\\"/g, '"');
+        };
+        
         const isbn = getValue('isbn');
         if (!isbn) continue; // Skip rows without ISBN
         
-        const title = getValue('title');
-        const author = getValue('author');
+        const title = unescapeField(getValue('title'));
+        const author = unescapeField(getValue('author'));
         const year = getValue('year');
-        const description = getValue('description');
+        const description = unescapeField(getValue('description'));
         const coverUrl = getValue('coverUrl');
         const tagsStr = getValue('tags');
         let addedAt = getValue('addedAt');

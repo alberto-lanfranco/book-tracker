@@ -1257,13 +1257,22 @@ body.keyboard-open .bottom-nav {
     }
     
     .header {
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
+        padding-left: 0;
+        padding-right: 0;
     }
     
     .header h1 {
         font-size: 24px;
-        padding: 6px 20px 8px;
+        padding: 6px 16px 8px;
+    }
+    
+    .search-container {
+        padding: 16px 16px 0;
+    }
+    
+    .filter-section {
+        padding: 12px 16px;
+        margin: -16px -16px 16px -16px;
     }
     
     .bottom-nav {

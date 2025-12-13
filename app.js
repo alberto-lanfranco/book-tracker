@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.0.6';
+const APP_VERSION = '3.1.2';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -554,7 +554,7 @@ function createSearchResultItem(book) {
 
     const coverUrl = book.coverUrl 
         ? book.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="90" fill="%232c2c2e"%3E%3Crect width="60" height="90"/%3E%3Crect width="60" height="90"/%3E%3Ctext x="50%25" y="50%25" fill="%238e8e93" text-anchor="middle" dy=".3em" font-size="24"%3E📖%3C/text%3E%3C/svg%3E';
+        : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="90" fill="%232c2c2e"%3E%3Crect width="60" height="90"/%3E%3Ctext x="50%25" y="50%25" fill="%238e8e93" text-anchor="middle" dy=".3em" font-size="24"%3E📖%3C/text%3E%3C/svg%3E';
 
     // Check if book exists in database (match by Google Books ID or ISBN)
     const existingBook = state.books.find(b => 
@@ -1003,8 +1003,19 @@ function getListStatusButtons(currentTag, bookId) {
 
 // Update book metadata
 function updateBookMetadata(bookId, updates) {
-    const book = state.books.find(b => b.id === bookId);
-    if (book) {
+    const bookIndex = state.books.findIndex(b => b.id === bookId);
+    if (bookIndex !== -1) {
+        const book = state.books[bookIndex];
+        
+        // If ID is being changed (due to ISBN change), check for duplicates
+        if (updates.id && updates.id !== bookId) {
+            const duplicate = state.books.find(b => b.id === updates.id);
+            if (duplicate) {
+                showToast('⚠️ Book with this ISBN already exists');
+                return;
+            }
+        }
+        
         Object.assign(book, updates);
         saveToLocalStorage();
         renderBooks();
@@ -1033,7 +1044,7 @@ function showManualEntryModal() {
             <input type="text" class="edit-input" id="manualCoverUrl" placeholder="Cover image URL (optional)">
             
             <label style="margin-top: 8px;">ISBN</label>
-            <input type="text" class="edit-input" id="manualIsbn" placeholder="ISBN-10 or ISBN-13">
+            <input type="text" class="edit-input" id="manualIsbn" placeholder="ISBN-10 or ISBN-13 (required)">
             
             <label style="margin-top: 16px;">Add to list:</label>
             <div class="detail-actions" style="margin-top: 12px; margin-bottom: 16px;">
@@ -1089,9 +1100,15 @@ function showManualEntryModal() {
     saveButton.addEventListener('click', () => {
         const title = document.getElementById('manualTitle').value.trim();
         const author = document.getElementById('manualAuthor').value.trim();
+        const isbn = document.getElementById('manualIsbn').value.trim();
         
         if (!title || !author) {
             showToast('⚠️ Title and Author are required');
+            return;
+        }
+        
+        if (!isbn) {
+            showToast('⚠️ ISBN is required for syncing to cloud');
             return;
         }
         
@@ -1101,13 +1118,12 @@ function showManualEntryModal() {
         }
         
         const year = document.getElementById('manualYear').value.trim() || 'N/A';
-        const isbn = document.getElementById('manualIsbn').value.trim() || null;
         const description = document.getElementById('manualDescription').value.trim() || null;
         const coverUrl = document.getElementById('manualCoverUrl').value.trim() || null;
         
         // Create book object
         const manualBook = {
-            id: isbn || `manual_${Date.now()}`, // Use ISBN or generate unique ID
+            id: isbn,
             title: title,
             author: author,
             year: year,
@@ -1120,12 +1136,7 @@ function showManualEntryModal() {
         // Set timestamps based on selected list
         setListTimestamps(manualBook, selectedList);
         
-        // Warn if no ISBN
-        if (!isbn) {
-            showToast('⚠️ Book added without ISBN - won\'t sync to cloud');
-        } else {
-            showToast('Book added!');
-        }
+        showToast('Book added!');
         
         // Add to state
         state.books.push(manualBook);
@@ -1296,7 +1307,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
                 <input type="text" class="edit-input edit-title" id="editTitle" value="${book.title}" placeholder="Title">
                 <input type="text" class="edit-input" id="editAuthor" value="${book.author}" placeholder="Author">
                 <input type="text" class="edit-input" id="editYear" value="${book.year}" placeholder="Year" style="width: 100px;">
-                ${isbn}
+                <input type="text" class="edit-input" id="editIsbn" value="${book.isbn || ''}" placeholder="ISBN (required)" style="width: 200px;">
                 <label>Description:</label>
                 <textarea class="edit-textarea" id="editDescription" placeholder="Description">${book.description || ''}</textarea>
                 ${tagsSection}
@@ -1339,16 +1350,31 @@ function showBookDetail(book, source = 'list', editMode = false) {
                 showBookDetail(book, source, true);
             } else if (btn.dataset.action === 'save-edit') {
                 // Save edit button
+                const newIsbn = document.getElementById('editIsbn').value.trim();
+                
+                // Validate ISBN is not empty
+                if (!newIsbn) {
+                    showToast('⚠️ ISBN is required');
+                    return;
+                }
+                
                 const updates = {
                     title: document.getElementById('editTitle').value.trim() || book.title,
                     author: document.getElementById('editAuthor').value.trim() || book.author,
                     year: document.getElementById('editYear').value.trim() || book.year,
                     description: document.getElementById('editDescription').value.trim() || null,
-                    coverUrl: document.getElementById('editCoverUrl').value.trim() || null
+                    coverUrl: document.getElementById('editCoverUrl').value.trim() || null,
+                    isbn: newIsbn
                 };
+                
+                // If ISBN changed, update the book ID as well
+                if (newIsbn !== book.isbn) {
+                    updates.id = newIsbn;
+                }
+                
                 updateBookMetadata(book.id, updates);
-                // Refresh the modal with updated data
-                const updatedBook = state.books.find(b => b.id === book.id);
+                // Refresh the modal with updated data (use new ID if changed)
+                const updatedBook = state.books.find(b => b.id === (updates.id || book.id));
                 if (updatedBook) {
                     showBookDetail(updatedBook, source, false);
                 }

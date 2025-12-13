@@ -216,9 +216,11 @@ Body: {
     - Title (text input)
     - Author (text input)
     - Year (text input)
+    - ISBN (text input, required)
     - Description (textarea)
     - Cover URL (text input)
   - Save/Cancel buttons to commit or discard changes
+  - ISBN changes update the book ID and check for duplicates
   - Changes sync to cloud immediately on save
 - **Tags management** - shown for books in lists:
   - Add tags by typing and pressing Enter
@@ -453,20 +455,20 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 3. Fill in fields:
    - Title (required)
    - Author (required)
+   - ISBN (required for cloud sync)
    - Year (optional)
    - Description (optional)
    - Cover URL (optional)
-   - ISBN (optional but recommended for cloud sync)
 4. Select one of three list buttons (To Read, Reading, Read)
    - Buttons toggle active state on click
    - "To Read" is pre-selected by default
 5. Click "Save Book" button at bottom
-6. Validates required fields (title, author, list selection)
-7. Creates book object with `id: isbn || 'manual_${timestamp}'`
+6. Validates required fields (title, author, isbn, list selection)
+7. Creates book object with `id: isbn`
 8. Sets timestamps using `setListTimestamps(book, listTag)`
 9. Adds to state.books array
-10. Saves to localStorage (triggers cloud sync if ISBN present)
-11. Shows toast notification with ISBN warning if no ISBN
+10. Saves to localStorage (triggers cloud sync)
+11. Shows success toast notification
 12. Closes modal and clears search
 
 ### Changing Book List Status
@@ -605,7 +607,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.0.6
+- **Current Version**: 3.1.2
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -626,6 +628,9 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.1.2** (2025-12-13): Fixed duplicate rect element in search result placeholder SVG
+- **3.1.1** (2025-12-13): Made ISBN field editable when editing existing books, validates for duplicates and updates book ID accordingly
+- **3.1.0** (2025-12-13): Made ISBN field mandatory for manual book entry to ensure all books can sync to cloud
 - **3.0.6** (2025-12-13): Changed default tab to Books view on app startup (previously was Add view)
 - **3.0.5** (2025-12-13): Added automatic push of sanitized TSV when double quotes detected - tracks if sanitization occurred during parsing and automatically pushes fixed version back to server
 - **3.0.4** (2025-12-13): Changed quote handling - double quotes (`"`) now replaced with single quotes (`'`) in TSV, applied to both new entries and pre-existing data, making `"` illegal in text fields. When double quotes detected during sync, sanitized TSV is automatically pushed back to server.

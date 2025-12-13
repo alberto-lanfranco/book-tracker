@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.0.5';
+const APP_VERSION = '3.0.6';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -214,8 +214,8 @@ function init() {
     // Render books view
     renderBooks();
     
-    // Show add view by default
-    switchView('addView');
+    // Show books view by default
+    switchView('booksView');
     
     setupEventListeners();
     

@@ -605,7 +605,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.0.5
+- **Current Version**: 3.0.6
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -626,6 +626,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.0.6** (2025-12-13): Changed default tab to Books view on app startup (previously was Add view)
 - **3.0.5** (2025-12-13): Added automatic push of sanitized TSV when double quotes detected - tracks if sanitization occurred during parsing and automatically pushes fixed version back to server
 - **3.0.4** (2025-12-13): Changed quote handling - double quotes (`"`) now replaced with single quotes (`'`) in TSV, applied to both new entries and pre-existing data, making `"` illegal in text fields. When double quotes detected during sync, sanitized TSV is automatically pushed back to server.
 - **3.0.3** (2025-12-13): Properly implemented backslash-escaped quotes - `"` → `\"` when saving to TSV, `\"` → `"` when reading/displaying

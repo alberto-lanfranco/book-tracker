@@ -1249,7 +1249,7 @@ body.keyboard-open .bottom-nav {
     }
 }
 
-/* Landscape mode */
+/* Landscape mode - iPhone */
 @media (max-height: 500px) and (orientation: landscape) {
     .app {
         max-width: none;
@@ -1297,6 +1297,17 @@ body.keyboard-open .bottom-nav {
     .nav-item svg {
         width: 20px;
         height: 20px;
+    }
+}
+
+/* Landscape mode - iPad and larger tablets */
+@media (min-width: 768px) and (orientation: landscape) {
+    .app {
+        max-width: none;
+    }
+    
+    .bottom-nav {
+        max-width: none;
     }
 }
 

@@ -1,7 +1,7 @@
 # Book Tracker PWA - Developer Guide
 
 ## Overview
-A Progressive Web App (PWA) for tracking books with an iOS-inspired minimal dark theme interface. Users can search for books, add them to a unified collection, and organize them using tags including three list status tags: To Read, Reading, and Read. Books can be filtered by tags and searched within the collection.
+A Progressive Web App (PWA) for tracking books with an iOS-inspired minimal dark theme interface. Users can search for books, add them to a unified collection. Books can be filtered by tags and searched within the collection.
 
 ## Tech Stack
 - **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3

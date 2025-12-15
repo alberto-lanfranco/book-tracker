@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.1.12';
+const APP_VERSION = '3.2.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -27,6 +27,22 @@ function getBookListStatus(book) {
     if (book.startedAt) return 'reading';
     if (book.addedAt) return 'to_read';
     return null;
+}
+
+// Helper to get all unique tags from all books
+function getAllUniqueTags() {
+    const tags = new Set();
+    state.books.forEach(book => {
+        if (book.tags) {
+            book.tags.forEach(tag => {
+                // Exclude rating tags
+                if (!tag.match(/^\d{2}_stars$/)) {
+                    tags.add(tag);
+                }
+            });
+        }
+    });
+    return Array.from(tags).sort();
 }
 
 // Ensure timestamp integrity when setting list status
@@ -826,21 +842,7 @@ function renderTagFilters() {
     if (!tagFiltersContainer) return;
     
     // Get all unique manual tags (excluding rating tags)
-    const manualTags = new Set();
-    
-    state.books.forEach(book => {
-        if (book.tags) {
-            book.tags.forEach(tag => {
-                // Exclude rating tags (01_stars to 10_stars)
-                if (!tag.match(/^\d{2}_stars$/)) {
-                    manualTags.add(tag);
-                }
-            });
-        }
-    });
-    
-    // Sort manual tags alphabetically
-    const sortedManualTags = Array.from(manualTags).sort();
+    const sortedManualTags = getAllUniqueTags();
     
     // Build HTML
     let html = '';
@@ -1188,12 +1190,20 @@ function showBookDetail(book, source = 'list', editMode = false) {
             !tag.match(/^\d{2}_stars$/)
         );
         const tagPills = displayTags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
+        
+        // Get existing tags for suggestions
+        const existingTags = getAllUniqueTags();
+        const datalistOptions = existingTags.map(tag => `<option value="${tag}">`).join('');
+        
         tagsSection = `
             <div class="detail-tags">
                 <label>Tags:</label>
                 <div class="tags-container">
                     ${tagPills}
-                    <input type="text" class="tag-input" placeholder="Add tag..." data-book-id="${book.id}">
+                    <input type="text" class="tag-input" placeholder="Add tag..." list="tag-suggestions" data-book-id="${book.id}">
+                    <datalist id="tag-suggestions">
+                        ${datalistOptions}
+                    </datalist>
                 </div>
             </div>
         `;

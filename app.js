@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.2.2';
+const APP_VERSION = '3.2.3';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags

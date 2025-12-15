@@ -882,6 +882,17 @@ body.keyboard-open .bottom-nav {
     color: var(--text-tertiary);
 }
 
+/* Datalist dropdown arrow styling */
+.tag-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+.tag-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
 /* Sort Controls */
 .sort-controls {
     display: flex;

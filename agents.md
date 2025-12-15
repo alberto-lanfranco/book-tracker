@@ -608,7 +608,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.2.4
+- **Current Version**: 3.3.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -629,6 +629,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.3.0** (2025-12-15): Replaced native datalist with a custom tag selection UI. Added a dedicated button next to the tag input that opens a panel of existing tags for easy selection.
 - **3.2.4** (2025-12-15): Fixed datalist dropdown alignment by styling the native indicator directly with the custom icon, ensuring the visual icon matches the clickable area.
 - **3.2.3** (2025-12-15): Moved datalist dropdown icon to input background to guarantee visibility across all browsers, while keeping native click behavior.
 - **3.2.2** (2025-12-15): Replaced native datalist dropdown arrow with custom white SVG icon to ensure visibility in all dark mode environments.

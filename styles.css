@@ -882,24 +882,46 @@ body.keyboard-open .bottom-nav {
     color: var(--text-tertiary);
 }
 
-/* Datalist dropdown arrow styling */
-.tag-input::-webkit-calendar-picker-indicator {
-    /* Style the native indicator to be our custom white chevron */
-    color: transparent;
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iNiA5IDEyIDE1IDE4IDkiPjwvcG9seWxpbmU+PC9zdmc+');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 12px;
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-    margin-left: 4px;
+.tag-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    margin-top: 8px;
 }
 
-.tag-input::-webkit-calendar-picker-indicator:hover {
-    opacity: 1;
+.tag-suggestions-panel {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    margin-top: 8px;
+    border: 1px solid var(--separator);
+    width: 100%;
+}
+
+.tag-suggestions-panel.visible {
+    display: flex;
+    animation: slideIn 0.2s ease;
+}
+
+.suggestion-chip {
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    border: 1px solid var(--separator);
+    transition: all 0.2s ease;
+}
+
+.suggestion-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--bg-primary);
 }
 
 /* Sort Controls */

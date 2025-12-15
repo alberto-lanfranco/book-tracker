@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.2.4';
+const APP_VERSION = '3.3.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -1191,20 +1191,21 @@ function showBookDetail(book, source = 'list', editMode = false) {
         );
         const tagPills = displayTags.map(tag => `<span class="tag-pill">${tag}<button class="tag-remove" data-tag="${tag}">×</button></span>`).join('');
         
-        // Get existing tags for suggestions
-        const existingTags = getAllUniqueTags();
-        const datalistOptions = existingTags.map(tag => `<option value="${tag}">`).join('');
-        
         tagsSection = `
             <div class="detail-tags">
                 <label>Tags:</label>
                 <div class="tags-container">
                     ${tagPills}
-                    <input type="text" class="tag-input" placeholder="Add tag..." list="tag-suggestions" data-book-id="${book.id}">
-                    <datalist id="tag-suggestions">
-                        ${datalistOptions}
-                    </datalist>
                 </div>
+                <div class="tag-input-wrapper">
+                    <input type="text" class="tag-input" placeholder="Add tag..." data-book-id="${book.id}">
+                    <button class="btn btn-icon" id="toggleTagsBtn" title="Choose from existing tags">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <div class="tag-suggestions-panel" id="tagSuggestionsPanel"></div>
             </div>
         `;
     }
@@ -1444,6 +1445,46 @@ function showBookDetail(book, source = 'list', editMode = false) {
                 setTimeout(() => showBookDetail(book, source), 100);
             });
         });
+        
+        // Toggle tags panel event listener
+        const toggleTagsBtn = content.querySelector('#toggleTagsBtn');
+        const suggestionsPanel = content.querySelector('#tagSuggestionsPanel');
+        
+        if (toggleTagsBtn && suggestionsPanel) {
+            toggleTagsBtn.addEventListener('click', () => {
+                const isVisible = suggestionsPanel.classList.contains('visible');
+                
+                if (!isVisible) {
+                    // Show panel
+                    const existingTags = getAllUniqueTags();
+                    // Filter out tags already on the book
+                    const availableTags = existingTags.filter(t => !book.tags || !book.tags.includes(t));
+                    
+                    if (availableTags.length === 0) {
+                        suggestionsPanel.innerHTML = '<span style="color: var(--text-tertiary); font-size: 13px;">No other existing tags</span>';
+                    } else {
+                        suggestionsPanel.innerHTML = availableTags.map(tag => 
+                            `<span class="suggestion-chip" data-tag="${tag}">${tag}</span>`
+                        ).join('');
+                        
+                        // Add click listeners to chips
+                        suggestionsPanel.querySelectorAll('.suggestion-chip').forEach(chip => {
+                            chip.addEventListener('click', () => {
+                                addTagToBook(book.id, chip.dataset.tag);
+                                // Re-render the book detail
+                                setTimeout(() => showBookDetail(book, source), 100);
+                            });
+                        });
+                    }
+                    suggestionsPanel.classList.add('visible');
+                    toggleTagsBtn.classList.add('active');
+                } else {
+                    // Hide panel
+                    suggestionsPanel.classList.remove('visible');
+                    toggleTagsBtn.classList.remove('active');
+                }
+            });
+        }
     }
 
     modal.classList.add('active');

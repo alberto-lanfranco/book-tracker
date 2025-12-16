@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.5.2';
+const APP_VERSION = '3.5.9';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -195,6 +195,7 @@ let maintenanceStatus;
 
 // Current book being viewed in detail modal
 let currentDetailBook = null;
+let currentDetailSource = 'list';
 
 // Initialize app
 function init() {
@@ -468,20 +469,25 @@ function setupEventListeners() {
             if (existingBook) {
                 // Book exists, change list status
                 changeBookListStatus(existingBook.id, listTag);
+                
+                // Re-render modal to show/hide rating section based on new status
+                const updatedBook = state.books.find(b => b.id === existingBook.id);
+                if (updatedBook) {
+                    showBookDetail(updatedBook, currentDetailSource);
+                }
             } else {
                 // New book, add to list (keepSearchOpen = true to prevent clearing search)
                 addBookToList(currentDetailBook, listTag, true);
-            }
-            
-            // Update button states without closing modal
-            const allButtons = bookDetailContent.querySelectorAll('button[data-action="add-to-list"]');
-            allButtons.forEach(btn => {
-                if (btn.dataset.tag === listTag) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
+                
+                // Re-render modal to show/hide rating section based on new status
+                const addedBook = state.books.find(b => 
+                    b.isbn === currentDetailBook.isbn || 
+                    (currentDetailBook.id && b.id === currentDetailBook.id)
+                );
+                if (addedBook) {
+                    showBookDetail(addedBook, currentDetailSource);
                 }
-            });
+            }
         });
     }
 }
@@ -976,17 +982,6 @@ function createBookCard(book) {
                 ${ratingDisplay}
                 ${tags}
             </div>
-            <div class="book-card-actions">
-                <div class="action-group">
-                    ${getListStatusButtons(currentListTag, book.id)}
-                </div>
-                <button class="btn btn-icon btn-danger" onclick="removeBook('${book.id}')" title="Remove">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                </button>
-            </div>
         </div>
     `;
 
@@ -1186,27 +1181,40 @@ function showBookDetail(book, source = 'list', editMode = false) {
     const modal = document.getElementById('bookDetailModal');
     const content = document.getElementById('bookDetailContent');
     
-    // Store current book for event handlers
-    currentDetailBook = book;
+    // Check if book exists in database
+    const existingBook = state.books.find(b => 
+        b.id === book.id || 
+        (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
+    );
 
-    const coverUrl = book.coverUrl 
-        ? book.coverUrl.replace('http://', 'https://')
+    // Determine if we are treating this as a library book
+    const isLibraryBook = (source === 'list') || !!existingBook;
+    
+    // Use existingBook if available (source of truth), otherwise use the passed book
+    const displayBook = existingBook || book;
+    
+    // Store current book for event handlers
+    currentDetailBook = displayBook;
+    currentDetailSource = source;
+
+    const coverUrl = displayBook.coverUrl 
+        ? displayBook.coverUrl.replace('http://', 'https://')
         : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgMjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSI1MCIgeT0iNzUiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMyIgcng9IjQiLz48bGluZSB4MT0iNjUiIHkxPSIxMTAiIHgyPSIxMzUiIHkyPSIxMTAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxMzUiIHgyPSIxMzUiIHkyPSIxMzUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxNjAiIHgyPSIxMjAiIHkyPSIxNjAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48L3N2Zz4=';
 
-    const description = book.description || 'No description available.';
-    const isbn = book.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${book.isbn}</div>` : '';
+    const description = displayBook.description || 'No description available.';
+    const isbn = displayBook.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${displayBook.isbn}</div>` : '';
 
     // Edit button for books in lists (only shown in edit mode for save/cancel)
     let editButton = '';
-    if (source === 'list' && editMode) {
-        editButton = `<button class="btn btn-small" data-action="save-edit" data-book-id="${book.id}">Save</button>
-               <button class="btn btn-small" data-action="cancel-edit" data-book-id="${book.id}">Cancel</button>`;
+    if (isLibraryBook && editMode) {
+        editButton = `<button class="btn btn-small" data-action="save-edit" data-book-id="${displayBook.id}">Save</button>
+               <button class="btn btn-small" data-action="cancel-edit" data-book-id="${displayBook.id}">Cancel</button>`;
     }
 
     // Show tags section for books in lists (filter out rating tags)
     let tagsSection = '';
-    if (source === 'list') {
-        const allTags = book.tags || [];
+    if (isLibraryBook) {
+        const allTags = displayBook.tags || [];
         const displayTags = allTags.filter(tag => 
             !tag.match(/^\d{2}_stars$/)
         );
@@ -1219,7 +1227,7 @@ function showBookDetail(book, source = 'list', editMode = false) {
                     ${tagPills}
                 </div>
                 <div class="tag-input-wrapper">
-                    <input type="text" class="tag-input" placeholder="Add tag..." data-book-id="${book.id}">
+                    <input type="text" class="tag-input" placeholder="Add tag..." data-book-id="${displayBook.id}">
                     <button class="btn btn-icon" id="toggleTagsBtn" title="Choose from existing tags">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -1233,9 +1241,9 @@ function showBookDetail(book, source = 'list', editMode = false) {
 
     // Show rating input for books with Read status (finishedAt is set)
     let ratingSection = '';
-    const hasReadTag = book.finishedAt;
-    if (source === 'list' && hasReadTag) {
-        const currentRating = getRatingFromTags(book.tags) || 0;
+    const hasReadTag = displayBook.finishedAt;
+    if (isLibraryBook && hasReadTag) {
+        const currentRating = getRatingFromTags(displayBook.tags) || 0;
         let stars = '';
         for (let i = 1; i <= 10; i++) {
             const filled = i <= currentRating ? 'filled' : '';
@@ -1244,106 +1252,64 @@ function showBookDetail(book, source = 'list', editMode = false) {
         ratingSection = `
             <div class="detail-rating">
                 <label>Rating:</label>
-                <div class="star-rating" data-book-id="${book.id}">${stars}</div>
+                <div class="star-rating" data-book-id="${displayBook.id}">${stars}</div>
             </div>
         `;
     }
 
     // Show list action buttons
     let listActions = '';
-    if (source === 'search') {
-        // Check if book exists in database
-        const existingBook = state.books.find(b => 
-            b.id === book.id || 
-            (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
-        );
-        
-        if (existingBook) {
-            const currentListTag = getBookListStatus(existingBook);
-            listActions = `
-                <div class="action-group-pill">
-                    <div class="list-pill-selector">
-                        <button class="pill-segment ${currentListTag === 'to_read' ? 'active' : ''}" data-action="add-to-list" data-tag="to_read" data-book-id="${existingBook.id}" title="To Read">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                            </svg>
-                            <span>To Read</span>
-                        </button>
-                        <button class="pill-segment ${currentListTag === 'reading' ? 'active' : ''}" data-action="add-to-list" data-tag="reading" data-book-id="${existingBook.id}" title="Reading">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                            </svg>
-                            <span>Reading</span>
-                        </button>
-                        <button class="pill-segment ${currentListTag === 'read' ? 'active' : ''}" data-action="add-to-list" data-tag="read" data-book-id="${existingBook.id}" title="Read">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                            <span>Read</span>
-                        </button>
-                    </div>
-                    <button class="btn-delete-circle" data-action="delete" data-book-id="${existingBook.id}" title="Remove">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
-                </div>
-            `;
-        } else {
-            listActions = `
-                <button class="btn-add-book" data-action="add-book-initial" data-book-id="${book.id}">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                        <rect x="3" y="3" width="18" height="18" rx="4" ry="4"></rect>
-                        <line x1="12" y1="8" x2="12" y2="16"></line>
-                        <line x1="8" y1="12" x2="16" y2="12"></line>
-                    </svg>
-                    <span>Add</span>
-                </button>
-            `;
-        }
-    } else {
-        // Show list status and delete buttons for books in lists
-        // Determine current list status from timestamps
-        const currentTag = getBookListStatus(book) || 'to_read';
-        
-        const icons = {
-            to_read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
-            reading: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
-            read: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-        };
-        const labels = {
-            to_read: 'To Read',
-            reading: 'Reading',
-            read: 'Read'
-        };
-        
-        let buttons = '<div class="action-group">';
-        for (const [key, icon] of Object.entries(icons)) {
-            const isActive = key === currentTag;
-            const activeClass = isActive ? ' active' : '';
-            buttons += `<button class="btn btn-icon${activeClass}" data-tag="${key}" data-book-id="${book.id}" title="${labels[key]}" ${isActive ? 'disabled' : ''}>${icon}</button>`;
-        }
-        buttons += '</div>';
+    if (isLibraryBook) {
+        const currentTag = getBookListStatus(displayBook) || 'to_read';
         
         listActions = `
-            <div class="detail-actions">
-                ${buttons}
-                <button class="btn btn-icon" data-action="edit" data-book-id="${book.id}" title="Edit">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <div class="action-group-pill">
+                <div class="list-pill-selector">
+                    <button class="pill-segment ${currentTag === 'to_read' ? 'active' : ''}" data-action="add-to-list" data-tag="to_read" data-book-id="${displayBook.id}" title="To Read">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        <span>To Read</span>
+                    </button>
+                    <button class="pill-segment ${currentTag === 'reading' ? 'active' : ''}" data-action="add-to-list" data-tag="reading" data-book-id="${displayBook.id}" title="Reading">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                        <span>Reading</span>
+                    </button>
+                    <button class="pill-segment ${currentTag === 'read' ? 'active' : ''}" data-action="add-to-list" data-tag="read" data-book-id="${displayBook.id}" title="Read">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Read</span>
+                    </button>
+                </div>
+                <button class="btn-edit-circle" data-action="edit" data-book-id="${displayBook.id}" title="Edit">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                 </button>
-                <button class="btn btn-icon btn-danger" data-action="delete" data-book-id="${book.id}" title="Remove">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="btn-delete-circle" data-action="delete" data-book-id="${displayBook.id}" title="Remove">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
                 </button>
             </div>
+        `;
+    } else {
+        listActions = `
+            <button class="btn-add-book" data-action="add-book-initial" data-book-id="${displayBook.id}">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="4" ry="4"></rect>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span>Add</span>
+            </button>
         `;
     }
 
@@ -1370,19 +1336,21 @@ function showBookDetail(book, source = 'list', editMode = false) {
         `;
     } else {
         content.innerHTML = `
-            <div class="detail-cover-container">
-                <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgMjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSI1MCIgeT0iNzUiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMyIgcng9IjQiLz48bGluZSB4MT0iNjUiIHkxPSIxMTAiIHgyPSIxMzUiIHkyPSIxMTAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxMzUiIHgyPSIxMzUiIHkyPSIxMzUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxNjAiIHgyPSIxMjAiIHkyPSIxNjAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48L3N2Zz4='">
+            <div class="detail-header-layout">
+                <div class="detail-cover-wrapper">
+                    <img src="${coverUrl}" alt="${book.title}" class="detail-cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgMjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSI1MCIgeT0iNzUiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMyIgcng9IjQiLz48bGluZSB4MT0iNjUiIHkxPSIxMTAiIHgyPSIxMzUiIHkyPSIxMTAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxMzUiIHgyPSIxMzUiIHkyPSIxMzUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxNjAiIHgyPSIxMjAiIHkyPSIxNjAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48L3N2Zz4='">
+                </div>
+                <div class="detail-metadata">
+                    <h2 class="detail-title">${book.title}</h2>
+                    <div class="detail-author">${book.author}</div>
+                    <div class="detail-year">${book.year}</div>
+                    ${isbn}
+                </div>
             </div>
-            <div class="detail-info">
-                <h2 class="detail-title">${book.title}</h2>
-                <div class="detail-author">${book.author}</div>
-                <div class="detail-year">${book.year}</div>
-                ${isbn}
-                ${tagsSection}
-                ${ratingSection}
-                ${listActions}
-                <div class="detail-description">${description}</div>
-            </div>
+            ${listActions}
+            ${tagsSection}
+            ${ratingSection}
+            <div class="detail-description">${description}</div>
         `;
     }
 

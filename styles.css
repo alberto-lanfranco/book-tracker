@@ -1331,6 +1331,10 @@ body.keyboard-open .bottom-nav {
     .app {
         max-width: none;
     }
+
+    .modal-content {
+        max-width: 900px;
+    }
 }
 
 /* Update Banner */
@@ -1547,4 +1551,106 @@ body.keyboard-open .bottom-nav {
 .btn-delete-circle:active {
     transform: scale(0.9);
     background: rgba(255, 69, 58, 0.25);
+}
+
+/* Detail Header Layout (Side-by-Side) */
+.detail-header-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 8px;
+}
+
+.detail-cover-wrapper {
+    flex-shrink: 0;
+    width: 110px;
+}
+
+.detail-cover-wrapper .detail-cover {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
+    margin-bottom: 0;
+}
+
+.detail-metadata {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 4px;
+}
+
+.detail-metadata .detail-title {
+    font-size: 22px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.detail-metadata .detail-author {
+    font-size: 17px;
+    margin-bottom: 4px;
+}
+
+.detail-metadata .detail-year {
+    font-size: 15px;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+}
+
+.detail-metadata .detail-isbn {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+}
+
+/* Adjust rating and tags in metadata */
+.detail-metadata .detail-rating {
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+.detail-metadata .detail-tags {
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+/* Larger screens adjustments */
+@media (min-width: 768px) {
+    .detail-cover-wrapper {
+        width: 140px;
+    }
+    
+    .detail-metadata .detail-title {
+        font-size: 28px;
+    }
+    
+    .detail-metadata .detail-author {
+        font-size: 20px;
+    }
+}
+
+/* Edit Circle Button */
+.btn-edit-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-edit-circle:active {
+    transform: scale(0.9);
+    background: var(--separator);
 }

@@ -630,6 +630,13 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.5.9** (2025-12-16): UI Update: Removed list status buttons (To Read/Reading/Read) and delete button from book cards in the "Books" tab list view for a cleaner interface.
+- **3.5.8** (2025-12-16): Bug Fix: Fixed issue where rating section would not appear immediately when moving a book to "Read" list in the detail view.
+- **3.5.7** (2025-12-16): UI Update: Moved tags and rating section in book detail view to be positioned between the list action buttons and the book description.
+- **3.5.6** (2025-12-16): Code Refactor: Fully unified `showBookDetail` logic to ensure identical rendering for library books regardless of entry point (Search vs List), fixing missing Edit button in search view.
+- **3.5.5** (2025-12-16): Unified book detail view actions - now uses the same pill selector and circular buttons (edit/delete) for both search results and existing library books.
+- **3.5.4** (2025-12-16): Updated book detail layout to display cover image side-by-side with book metadata (title, author, etc.) for better use of space.
+- **3.5.3** (2025-12-16): Increased max-width of book detail modal on larger screens (tablets/desktop) to 900px to better utilize horizontal space.
 - **3.5.2** (2025-12-16): Updated "Add" button style in book detail view to exactly match the dimensions, icon size, and label spacing of the list selector pill.
 - **3.5.1** (2025-12-16): Refined book detail UI - added labels to list selector pills, updated "Add" button style (pill-shaped, vertical layout), and increased spacing between actions and description.
 - **3.5.0** (2025-12-16): Redesigned book detail view from search results. Now shows a single "Add" button initially. Upon adding, it transforms into a pill selector for list status (To Read, Reading, Read) and a separate circular delete button.

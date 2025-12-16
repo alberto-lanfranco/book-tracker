@@ -269,7 +269,7 @@ body {
 @media (orientation: landscape) {
     .bottom-nav {
         bottom: 20px;
-        right: calc(20px + env(safe-area-inset-right));
+        right: calc(20px + env(safe-area-inset-right, 0px));
     }
 }
 

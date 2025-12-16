@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.5.15';
+const APP_VERSION = '3.5.16';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -295,11 +295,29 @@ function setupEventListeners() {
 
     // Keyboard detection for mobile
     let initialHeight = window.innerHeight;
+    let initialWidth = window.innerWidth;
+    
     window.addEventListener('resize', () => {
-        if (window.innerHeight < initialHeight - 100) {
+        const currentHeight = window.innerHeight;
+        const currentWidth = window.innerWidth;
+        
+        // If width changed significantly, it's likely a rotation or window resize
+        if (Math.abs(currentWidth - initialWidth) > 50) {
+            initialWidth = currentWidth;
+            initialHeight = currentHeight;
+            document.body.classList.remove('keyboard-open');
+            return;
+        }
+        
+        // If width didn't change but height decreased significantly, it's likely keyboard
+        if (currentHeight < initialHeight - 100) {
             document.body.classList.add('keyboard-open');
         } else {
             document.body.classList.remove('keyboard-open');
+            // Update initial height if it increased (e.g. browser bars hidden/shown)
+            if (currentHeight > initialHeight) {
+                initialHeight = currentHeight;
+            }
         }
     });
 

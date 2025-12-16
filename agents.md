@@ -630,6 +630,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.5.16** (2025-12-16): Bug Fix: Fixed issue where bottom navigation would disappear in landscape mode due to incorrect keyboard detection logic. Added proper width change detection to distinguish between rotation and keyboard events.
 - **3.5.15** (2025-12-16): UI Fix: Fixed bottom navigation positioning. Set bottom padding to 20px in both portrait and landscape to match right padding, and improved landscape visibility by removing height restrictions and respecting safe area insets.
 - **3.5.14** (2025-12-16): UI Fix: Adjusted bottom navigation bar positioning. Reduced bottom padding in portrait mode and fixed visibility issue in landscape mode by respecting safe area insets correctly.
 - **3.5.13** (2025-12-16): UI Update: Removed rounded corners from app icons (square background) for better platform adaptability.

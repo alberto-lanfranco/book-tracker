@@ -1018,7 +1018,10 @@ body.keyboard-open .bottom-nav {
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    padding-left: calc(20px + env(safe-area-inset-left));
+    padding-right: calc(20px + env(safe-area-inset-right));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -1590,6 +1593,7 @@ body.keyboard-open .bottom-nav {
     flex-direction: column;
     justify-content: center;
     padding-top: 4px;
+    padding-right: 40px; /* Prevent overlap with close button */
 }
 
 .detail-metadata .detail-title {

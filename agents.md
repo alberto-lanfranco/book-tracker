@@ -630,6 +630,10 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.5.13** (2025-12-16): UI Update: Removed rounded corners from app icons (square background) for better platform adaptability.
+- **3.5.12** (2025-12-16): UI Update: Updated app icons with a thinner stroke (0.65px) and accent color (#0a84ff) for the book symbol, matching the active state of the bottom navigation bar.
+- **3.5.11** (2025-12-16): UI Update: Refined app icons with a dark background (#1c1c1e) and thinner white stroke (1.3px) for a sleeker, more modern look.
+- **3.5.10** (2025-12-16): UI Update: Updated app icons (favicon, PWA icons) to use the same open book symbol as the "Books" tab, replacing the previous emoji-based icons.
 - **3.5.9** (2025-12-16): UI Update: Removed list status buttons (To Read/Reading/Read) and delete button from book cards in the "Books" tab list view for a cleaner interface.
 - **3.5.8** (2025-12-16): Bug Fix: Fixed issue where rating section would not appear immediately when moving a book to "Read" list in the detail view.
 - **3.5.7** (2025-12-16): UI Update: Moved tags and rating section in book detail view to be positioned between the list action buttons and the book description.

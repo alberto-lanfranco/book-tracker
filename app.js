@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.5.2';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -431,6 +431,27 @@ function setupEventListeners() {
     const bookDetailContent = document.getElementById('bookDetailContent');
     if (bookDetailContent) {
         bookDetailContent.addEventListener('click', (e) => {
+            // Handle Add Book Initial
+            const addButton = e.target.closest('button[data-action="add-book-initial"]');
+            if (addButton) {
+                if (!currentDetailBook) return;
+                
+                // Add to 'to_read' by default
+                addBookToList(currentDetailBook, 'to_read', true);
+                
+                // Re-render the modal to show the pill selector
+                // Find the book in state to ensure we have the latest data (ID, timestamps)
+                const addedBook = state.books.find(b => 
+                    b.isbn === currentDetailBook.isbn || 
+                    (currentDetailBook.id && b.id === currentDetailBook.id)
+                );
+                
+                if (addedBook) {
+                    showBookDetail(addedBook, 'search');
+                }
+                return;
+            }
+
             const button = e.target.closest('button[data-action="add-to-list"]');
             if (!button) return;
             
@@ -1231,43 +1252,58 @@ function showBookDetail(book, source = 'list', editMode = false) {
     // Show list action buttons
     let listActions = '';
     if (source === 'search') {
-        // Check if book exists in database to highlight current list
+        // Check if book exists in database
         const existingBook = state.books.find(b => 
             b.id === book.id || 
             (book.isbn && (b.id === book.isbn || b.isbn === book.isbn))
         );
-        const currentListTag = existingBook ? getBookListStatus(existingBook) : null;
         
-        listActions = `
-            <div class="detail-actions">
-                <div class="action-button-with-label">
-                    <button class="btn btn-icon ${currentListTag === 'to_read' ? 'active' : ''}" data-action="add-to-list" data-tag="to_read" data-book-id="${book.id}" title="To Read">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        if (existingBook) {
+            const currentListTag = getBookListStatus(existingBook);
+            listActions = `
+                <div class="action-group-pill">
+                    <div class="list-pill-selector">
+                        <button class="pill-segment ${currentListTag === 'to_read' ? 'active' : ''}" data-action="add-to-list" data-tag="to_read" data-book-id="${existingBook.id}" title="To Read">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            <span>To Read</span>
+                        </button>
+                        <button class="pill-segment ${currentListTag === 'reading' ? 'active' : ''}" data-action="add-to-list" data-tag="reading" data-book-id="${existingBook.id}" title="Reading">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                            <span>Reading</span>
+                        </button>
+                        <button class="pill-segment ${currentListTag === 'read' ? 'active' : ''}" data-action="add-to-list" data-tag="read" data-book-id="${existingBook.id}" title="Read">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Read</span>
+                        </button>
+                    </div>
+                    <button class="btn-delete-circle" data-action="delete" data-book-id="${existingBook.id}" title="Remove">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                         </svg>
                     </button>
-                    <span class="button-label">To Read</span>
                 </div>
-                <div class="action-button-with-label">
-                    <button class="btn btn-icon ${currentListTag === 'reading' ? 'active' : ''}" data-action="add-to-list" data-tag="reading" data-book-id="${book.id}" title="Reading">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                        </svg>
-                    </button>
-                    <span class="button-label">Reading</span>
-                </div>
-                <div class="action-button-with-label">
-                    <button class="btn btn-icon ${currentListTag === 'read' ? 'active' : ''}" data-action="add-to-list" data-tag="read" data-book-id="${book.id}" title="Read">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </button>
-                    <span class="button-label">Read</span>
-                </div>
-            </div>
-        `;
+            `;
+        } else {
+            listActions = `
+                <button class="btn-add-book" data-action="add-book-initial" data-book-id="${book.id}">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <rect x="3" y="3" width="18" height="18" rx="4" ry="4"></rect>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    <span>Add</span>
+                </button>
+            `;
+        }
     } else {
         // Show list status and delete buttons for books in lists
         // Determine current list status from timestamps
@@ -1356,7 +1392,17 @@ function showBookDetail(book, source = 'list', editMode = false) {
             if (btn.dataset.action === 'delete') {
                 // Delete button
                 removeBook(book.id);
-                closeBookDetail();
+                
+                // Check if book was removed (user might have cancelled)
+                const stillExists = state.books.some(b => b.id === book.id);
+                if (!stillExists) {
+                    if (source === 'search') {
+                        // Re-render modal to show "Add" button
+                        showBookDetail(book, 'search');
+                    } else {
+                        closeBookDetail();
+                    }
+                }
             } else if (btn.dataset.action === 'edit') {
                 // Edit button
                 showBookDetail(book, source, true);

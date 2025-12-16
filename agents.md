@@ -420,7 +420,8 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 ## Mobile Optimization
 
 ### Bottom Navigation
-- Fixed position at bottom
+- Floating pill-shaped bar at bottom-right
+- Fixed position
 - Safe area support: `env(safe-area-inset-bottom)`
 - 3 nav items with icons + labels
 - Active state with accent color
@@ -629,6 +630,12 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.5.2** (2025-12-16): Updated "Add" button style in book detail view to exactly match the dimensions, icon size, and label spacing of the list selector pill.
+- **3.5.1** (2025-12-16): Refined book detail UI - added labels to list selector pills, updated "Add" button style (pill-shaped, vertical layout), and increased spacing between actions and description.
+- **3.5.0** (2025-12-16): Redesigned book detail view from search results. Now shows a single "Add" button initially. Upon adding, it transforms into a pill selector for list status (To Read, Reading, Read) and a separate circular delete button.
+- **3.4.2** (2025-12-16): Changed search input placeholder in Add view to "Add new books...".
+- **3.4.1** (2025-12-16): Changed title of Add view from "Add Book" to "Add" for consistency with navigation label.
+- **3.4.0** (2025-12-16): Redesigned bottom navigation bar - now a floating pill-shaped bar positioned at the bottom-right of the screen.
 - **3.3.0** (2025-12-15): Replaced native datalist with a custom tag selection UI. Added a dedicated button next to the tag input that opens a panel of existing tags for easy selection.
 - **3.2.4** (2025-12-15): Fixed datalist dropdown alignment by styling the native indicator directly with the custom icon, ensuring the visual icon matches the clickable area.
 - **3.2.3** (2025-12-15): Moved datalist dropdown icon to input background to guarantee visibility across all browsers, while keeping native click behavior.

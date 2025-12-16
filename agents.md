@@ -630,6 +630,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.5.14** (2025-12-16): UI Fix: Adjusted bottom navigation bar positioning. Reduced bottom padding in portrait mode and fixed visibility issue in landscape mode by respecting safe area insets correctly.
 - **3.5.13** (2025-12-16): UI Update: Removed rounded corners from app icons (square background) for better platform adaptability.
 - **3.5.12** (2025-12-16): UI Update: Updated app icons with a thinner stroke (0.65px) and accent color (#0a84ff) for the book symbol, matching the active state of the bottom navigation bar.
 - **3.5.11** (2025-12-16): UI Update: Refined app icons with a dark background (#1c1c1e) and thinner white stroke (1.3px) for a sleeker, more modern look.

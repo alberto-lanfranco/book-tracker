@@ -250,7 +250,7 @@ body {
 /* Bottom Navigation */
 .bottom-nav {
     position: fixed;
-    bottom: calc(20px + env(safe-area-inset-bottom));
+    bottom: calc(10px + env(safe-area-inset-bottom));
     right: 20px;
     left: auto;
     display: flex;
@@ -264,6 +264,13 @@ body {
     width: auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     gap: 24px;
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .bottom-nav {
+        bottom: 20px;
+        right: calc(20px + env(safe-area-inset-right));
+    }
 }
 
 .nav-item {

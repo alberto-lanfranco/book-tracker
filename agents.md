@@ -370,11 +370,6 @@ addedAt	startedAt	finishedAt	isbn	tags	title	author	year	coverUrl	description
   - Include dismiss button (×)
   - Persist until manually dismissed
   - Types: info (blue), success (green), error (red)
-- **Update banner** (top of screen):
-  - Appears when new app version downloaded
-  - Sticky notification with dismiss button
-  - "Restart App" button to apply update
-  - Dismiss to hide without updating
 
 ## Styling Guidelines
 
@@ -519,9 +514,6 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Checks every 30 minutes while app has focus
   - Stops checking when app loses focus (battery optimization)
   - Listens for 'updatefound' event
-  - Shows banner when new version downloaded
-  - Banner: "🎉 Update Available! A new version has been downloaded."
-  - "Restart App" button to activate update
   - Automatic reload on controller change
 
 ## Error Handling
@@ -630,6 +622,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.5.18** (2025-12-17): UX Update: Removed update notification popup. Updates are now applied automatically with a page reload when a new version is detected.
 - **3.5.17** (2025-12-16): UI Fix: Adjusted book detail modal to respect safe area insets (notch) in both portrait and landscape modes. Added padding to book metadata to prevent title from overlapping with the close button.
 - **3.5.16** (2025-12-16): Bug Fix: Fixed issue where bottom navigation would disappear in landscape mode due to incorrect keyboard detection logic. Added proper width change detection to distinguish between rotation and keyboard events.
 - **3.5.15** (2025-12-16): UI Fix: Fixed bottom navigation positioning. Set bottom padding to 20px in both portrait and landscape to match right padding, and improved landscape visibility by removing height restrictions and respecting safe area insets.

@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.5.17';
+const APP_VERSION = '3.5.18';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -137,7 +137,7 @@ if ('serviceWorker' in navigator) {
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             // New service worker installed and old one still controlling
-                            showUpdateNotification(reg);
+                            console.log('New update installed, will reload automatically...');
                         }
                     });
                 });
@@ -2081,47 +2081,7 @@ function clearLocalCache() {
     }
 }
 
-// Show update notification banner
-function showUpdateNotification(registration) {
-    // Create update banner if it doesn't exist
-    let banner = document.getElementById('updateBanner');
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'updateBanner';
-        banner.className = 'update-banner';
-        banner.innerHTML = `
-            <div class="update-banner-content">
-                <div class="update-banner-text">
-                    <strong>🎉 Update Available!</strong>
-                    <span>A new version of the app has been downloaded.</span>
-                </div>
-                <div class="update-banner-actions">
-                    <button class="btn btn-primary" id="updateNowBtn">Restart App</button>
-                    <button class="update-dismiss-btn" id="updateDismissBtn">×</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(banner);
-        
-        // Add click handler to restart button
-        document.getElementById('updateNowBtn').addEventListener('click', () => {
-            if (registration.waiting) {
-                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-        });
-        
-        // Add click handler to dismiss button
-        document.getElementById('updateDismissBtn').addEventListener('click', () => {
-            banner.classList.remove('show');
-            setTimeout(() => banner.remove(), 300);
-        });
-        
-        // Show banner with animation
-        setTimeout(() => {
-            banner.classList.add('show');
-        }, 100);
-    }
-}
+
 
 // Update PWA (manual check from settings)
 function updatePWA() {
@@ -2133,8 +2093,7 @@ function updatePWA() {
                 registration.update().then(() => {
                     // Check if there's a waiting service worker
                     if (registration.waiting) {
-                        showMaintenanceStatus('Update available! Click "Restart App" banner to update.', 'success');
-                        showUpdateNotification(registration);
+                        showMaintenanceStatus('Update available! App will reload shortly.', 'success');
                     } else {
                         showMaintenanceStatus('App is up to date!', 'success');
                     }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.5.17';
+const CACHE_VERSION = '3.5.18';
 const CACHE_NAME = `book-tracker-v${CACHE_VERSION}`;
 const urlsToCache = [
   '/',

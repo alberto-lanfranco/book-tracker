@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.6.0';
+const APP_VERSION = '3.6.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -152,7 +152,6 @@ async function migrateExistingCovers() {
     if (cachedCount > 0) {
         saveToLocalStorage();
         console.log(`Cover migration complete: ${cachedCount} cached, ${failedCount} failed`);
-        showToast(`✓ Cached ${cachedCount} book covers for offline use`);
     }
 }
 

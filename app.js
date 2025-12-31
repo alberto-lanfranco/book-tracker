@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.5.18';
+const APP_VERSION = '3.6.0';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -76,6 +76,84 @@ function setListTimestamps(book, listStatus) {
     }
     
     return book;
+}
+
+// Function to convert image URL to data URI for offline caching
+async function convertImageToDataUri(url) {
+    if (!url) return null;
+
+    // If already a data URI, return as-is
+    if (url.startsWith('data:')) return url;
+
+    try {
+        // Ensure HTTPS
+        const httpsUrl = url.replace('http://', 'https://');
+
+        // Fetch the image
+        const response = await fetch(httpsUrl);
+        if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+
+        // Convert to blob
+        const blob = await response.blob();
+
+        // Convert blob to data URI
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error('Failed to convert image to data URI:', error);
+        return null;
+    }
+}
+
+// Cache book cover image for offline use
+async function cacheBookCover(book) {
+    if (!book.coverUrl) return book;
+
+    // Skip if already cached (has a cachedCover or coverUrl is already a data URI)
+    if (book.cachedCover || book.coverUrl.startsWith('data:')) return book;
+
+    const dataUri = await convertImageToDataUri(book.coverUrl);
+    if (dataUri) {
+        book.cachedCover = dataUri;
+        console.log(`Cached cover for: ${book.title}`);
+    }
+
+    return book;
+}
+
+// Migrate existing books to cache their covers
+async function migrateExistingCovers() {
+    console.log('Starting cover migration...');
+    let cachedCount = 0;
+    let failedCount = 0;
+
+    for (const book of state.books) {
+        // Only cache if there's a coverUrl and no cached version yet
+        if (book.coverUrl && !book.cachedCover && !book.coverUrl.startsWith('data:')) {
+            try {
+                await cacheBookCover(book);
+                cachedCount++;
+                // Save periodically to avoid losing progress
+                if (cachedCount % 10 === 0) {
+                    saveToLocalStorage();
+                }
+            } catch (error) {
+                console.error(`Failed to cache cover for ${book.title}:`, error);
+                failedCount++;
+            }
+        }
+    }
+
+    // Final save
+    if (cachedCount > 0) {
+        saveToLocalStorage();
+        console.log(`Cover migration complete: ${cachedCount} cached, ${failedCount} failed`);
+        showToast(`✓ Cached ${cachedCount} book covers for offline use`);
+    }
 }
 
 // Register service worker with update detection
@@ -230,7 +308,13 @@ function init() {
     
     // Render books view
     renderBooks();
-    
+
+    // Migrate existing book covers to cached data URIs for offline use
+    // Run this async without blocking the UI
+    setTimeout(() => {
+        migrateExistingCovers();
+    }, 1000);
+
     // Show books view by default
     switchView('booksView');
     
@@ -613,9 +697,12 @@ function createSearchResultItem(book) {
     const div = document.createElement('div');
     div.className = 'search-result-item';
 
-    const coverUrl = book.coverUrl 
-        ? book.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI5MCIgdmlld0JveD0iMCAwIDYwIDkwIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iOTAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSIxNSIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjM2MzY2IiBzdHJva2Utd2lkdGg9IjIiIHJ4PSIyIi8+PGxpbmUgeDE9IjIwIiB5MT0iMzAiIHgyPSI0MCIgeTI9IjMwIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PGxpbmUgeDE9IjIwIiB5MT0iMzgiIHgyPSI0MCIgeTI9IjM4IiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PGxpbmUgeDE9IjIwIiB5MT0iNDYiIHgyPSIzNSIgeTI9IjQ2IiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PC9zdmc+';
+    // Prefer cached cover for offline use, fallback to URL
+    const coverUrl = book.cachedCover
+        ? book.cachedCover
+        : (book.coverUrl
+            ? book.coverUrl.replace('http://', 'https://')
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI5MCIgdmlld0JveD0iMCAwIDYwIDkwIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iOTAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSIxNSIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjM2MzY2IiBzdHJva2Utd2lkdGg9IjIiIHJ4PSIyIi8+PGxpbmUgeDE9IjIwIiB5MT0iMzAiIHgyPSI0MCIgeTI9IjMwIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PGxpbmUgeDE9IjIwIiB5MT0iMzgiIHgyPSI0MCIgeTI9IjM4IiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PGxpbmUgeDE9IjIwIiB5MT0iNDYiIHgyPSIzNSIgeTI9IjQ2IiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMS41Ii8+PC9zdmc+');
 
     // Check if book exists in database (match by Google Books ID or ISBN)
     const existingBook = state.books.find(b => 
@@ -645,13 +732,13 @@ function createSearchResultItem(book) {
 
 // Add book to list
 // Add book with specific list tag (to_read, reading, read)
-function addBookToList(book, listTag, keepSearchOpen = false) {
+async function addBookToList(book, listTag, keepSearchOpen = false) {
     // Check if book has ISBN (required for cloud sync)
     if (!book.isbn) {
         showToast('⚠️ Book has no ISBN - won\'t sync to cloud');
         // Still add to local list, but warn user
     }
-    
+
     // Check if book already exists
     if (state.books.some(b => b.id === book.id)) {
         showToast('Book already in your collection');
@@ -660,14 +747,17 @@ function addBookToList(book, listTag, keepSearchOpen = false) {
 
     // Initialize tags array (for rating and custom tags only)
     book.tags = book.tags || [];
-    
+
     // Set timestamps based on list status
     setListTimestamps(book, listTag);
-    
+
+    // Cache the book cover for offline use
+    await cacheBookCover(book);
+
     state.books.push(book);
     saveToLocalStorage();
     renderBooks();
-    
+
     // Clear search and show success (unless keepSearchOpen is true)
     if (!keepSearchOpen) {
         searchResults.innerHTML = '';
@@ -969,9 +1059,12 @@ function createBookCard(book) {
     div.className = 'book-card';
     div.style.cursor = 'pointer';
 
-    const coverUrl = book.coverUrl 
-        ? book.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSIxMjAiIHZpZXdCb3g9IjAgMCA4MCAxMjAiPjxyZWN0IHdpZHRoPSI4MCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSIyMCIgeT0iMzAiIHdpZHRoPSI0MCIgaGVpZ2h0PSI1NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjM2MzY2IiBzdHJva2Utd2lkdGg9IjIuNSIgcng9IjMiLz48bGluZSB4MT0iMjgiIHkxPSI0NSIgeDI9IjUyIiB5Mj0iNDUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjI4IiB5MT0iNTUiIHgyPSI1MiIgeTI9IjU1IiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIyOCIgeTE9IjY1IiB4Mj0iNDUiIHkyPSI2NSIgc3Ryb2tlPSIjNjM2MzY2IiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=';
+    // Prefer cached cover for offline use, fallback to URL
+    const coverUrl = book.cachedCover
+        ? book.cachedCover
+        : (book.coverUrl
+            ? book.coverUrl.replace('http://', 'https://')
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSIxMjAiIHZpZXdCb3g9IjAgMCA4MCAxMjAiPjxyZWN0IHdpZHRoPSI4MCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSIyMCIgeT0iMzAiIHdpZHRoPSI0MCIgaGVpZ2h0PSI1NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjM2MzY2IiBzdHJva2Utd2lkdGg9IjIuNSIgcng9IjMiLz48bGluZSB4MT0iMjgiIHkxPSI0NSIgeDI9IjUyIiB5Mj0iNDUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjI4IiB5MT0iNTUiIHgyPSI1MiIgeTI9IjU1IiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIyOCIgeTE9IjY1IiB4Mj0iNDUiIHkyPSI2NSIgc3Ryb2tlPSIjNjM2MzY2IiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=');
     
     // Show rating if book has one (extract from tags)
     const rating = getRatingFromTags(book.tags);
@@ -1133,30 +1226,30 @@ function showManualEntryModal() {
     
     // Add event listener for save button
     const saveButton = document.getElementById('saveManualBook');
-    saveButton.addEventListener('click', () => {
+    saveButton.addEventListener('click', async () => {
         const title = document.getElementById('manualTitle').value.trim();
         const author = document.getElementById('manualAuthor').value.trim();
         const isbn = document.getElementById('manualIsbn').value.trim();
-        
+
         if (!title || !author) {
             showToast('⚠️ Title and Author are required');
             return;
         }
-        
+
         if (!isbn) {
             showToast('⚠️ ISBN is required for syncing to cloud');
             return;
         }
-        
+
         if (!selectedList) {
             showToast('⚠️ Please select a list');
             return;
         }
-        
+
         const year = document.getElementById('manualYear').value.trim() || 'N/A';
         const description = document.getElementById('manualDescription').value.trim() || null;
         const coverUrl = document.getElementById('manualCoverUrl').value.trim() || null;
-        
+
         // Create book object
         const manualBook = {
             id: isbn,
@@ -1168,12 +1261,15 @@ function showManualEntryModal() {
             coverUrl: coverUrl,
             tags: []
         };
-        
+
         // Set timestamps based on selected list
         setListTimestamps(manualBook, selectedList);
-        
+
+        // Cache the book cover for offline use
+        await cacheBookCover(manualBook);
+
         showToast('Book added!');
-        
+
         // Add to state
         state.books.push(manualBook);
         saveToLocalStorage();
@@ -1215,9 +1311,12 @@ function showBookDetail(book, source = 'list', editMode = false) {
     currentDetailBook = displayBook;
     currentDetailSource = source;
 
-    const coverUrl = displayBook.coverUrl 
-        ? displayBook.coverUrl.replace('http://', 'https://')
-        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgMjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSI1MCIgeT0iNzUiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMyIgcng9IjQiLz48bGluZSB4MT0iNjUiIHkxPSIxMTAiIHgyPSIxMzUiIHkyPSIxMTAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxMzUiIHgyPSIxMzUiIHkyPSIxMzUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxNjAiIHgyPSIxMjAiIHkyPSIxNjAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48L3N2Zz4=';
+    // Prefer cached cover for offline use, fallback to URL
+    const coverUrl = displayBook.cachedCover
+        ? displayBook.cachedCover
+        : (displayBook.coverUrl
+            ? displayBook.coverUrl.replace('http://', 'https://')
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgMjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiMyYzJjMmUiLz48cmVjdCB4PSI1MCIgeT0iNzUiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM2MzYzNjYiIHN0cm9rZS13aWR0aD0iMyIgcng9IjQiLz48bGluZSB4MT0iNjUiIHkxPSIxMTAiIHgyPSIxMzUiIHkyPSIxMTAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxMzUiIHgyPSIxMzUiIHkyPSIxMzUiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48bGluZSB4MT0iNjUiIHkxPSIxNjAiIHgyPSIxMjAiIHkyPSIxNjAiIHN0cm9rZT0iIzYzNjM2NiIgc3Ryb2tlLXdpZHRoPSIyLjUiLz48L3N2Zz4=');
 
     const description = displayBook.description || 'No description available.';
     const isbn = displayBook.isbn ? `<div class="detail-isbn"><strong>ISBN:</strong> ${displayBook.isbn}</div>` : '';

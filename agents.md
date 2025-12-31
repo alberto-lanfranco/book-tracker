@@ -54,7 +54,8 @@ state = {
     title: string,
     author: string,       // Comma-separated if multiple
     year: string,         // YYYY format
-    coverUrl: string,     // Google Books thumbnail URL
+    coverUrl: string,     // Google Books thumbnail URL (original source)
+    cachedCover: string,  // Base64 data URI of cached cover image for offline use (v3.6.0+)
     isbn: string,         // Optional
     description: string,  // Optional, HTML may be present
     tags: string[],       // User-defined tags and rating (01_stars to 10_stars)
@@ -287,10 +288,17 @@ addedAt	startedAt	finishedAt	isbn	tags	title	author	year	coverUrl	description
 
 #### Local Storage (Cache)
 - localStorage key: `bookTrackerData`
-- Saves entire state.books object as JSON
+- Saves entire state.books object as JSON (including cachedCover data URIs)
 - Loaded on app initialization
 - Auto-saves on any book operation
 - Syncs to GitHub Gist automatically after each save
+- **Offline Image Caching** (v3.6.0+):
+  - Book cover images are downloaded and converted to base64 data URIs
+  - Stored in `cachedCover` property for offline availability
+  - Cached automatically when books are added (manual or API)
+  - Existing books migrated on app load (background process)
+  - Display logic prefers cachedCover over coverUrl for reliability
+  - Only coverUrl (not cachedCover) is synced to cloud to keep TSV file small
 
 #### Settings Storage
 - localStorage key: `bookTrackerSettings`
@@ -601,7 +609,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.3.0
+- **Current Version**: 3.6.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -622,6 +630,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.6.0** (2025-12-31): Feature: All book covers are now cached for offline availability. Added convertImageToDataUri(), cacheBookCover(), and migrateExistingCovers() functions. Book covers are downloaded and stored as base64 data URIs in the cachedCover property when books are added. Existing book covers are migrated automatically on app load. Display logic updated to prefer cached covers over URLs for offline reliability. Only coverUrl is synced to cloud to keep TSV file size manageable.
 - **3.5.18** (2025-12-17): UX Update: Removed update notification popup. Updates are now applied automatically with a page reload when a new version is detected.
 - **3.5.17** (2025-12-16): UI Fix: Adjusted book detail modal to respect safe area insets (notch) in both portrait and landscape modes. Added padding to book metadata to prevent title from overlapping with the close button.
 - **3.5.16** (2025-12-16): Bug Fix: Fixed issue where bottom navigation would disappear in landscape mode due to incorrect keyboard detection logic. Added proper width change detection to distinguish between rotation and keyboard events.

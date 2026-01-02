@@ -1359,16 +1359,21 @@ function showBookDetail(book, source = 'list', editMode = false) {
     let ratingSection = '';
     const hasReadTag = displayBook.finishedAt;
     if (isLibraryBook && hasReadTag) {
-        const currentRating = getRatingFromTags(displayBook.tags) || 0;
-        let stars = '';
-        for (let i = 1; i <= 10; i++) {
-            const filled = i <= currentRating ? 'filled' : '';
-            stars += `<span class="star ${filled}" data-rating="${i}">★</span>`;
-        }
+        const currentRating = getRatingFromTags(displayBook.tags);
+        const ratingDisplay = currentRating ? `⭐ ${currentRating}/10` : '⭐ ?/10';
         ratingSection = `
             <div class="detail-rating">
                 <label>Rating:</label>
-                <div class="star-rating" data-book-id="${displayBook.id}">${stars}</div>
+                <div class="rating-display-wrapper" data-book-id="${displayBook.id}">
+                    <div class="rating-display">${ratingDisplay}</div>
+                    <input type="number"
+                           class="rating-input"
+                           min="1"
+                           max="10"
+                           step="1"
+                           style="display: none;"
+                           placeholder="1-10">
+                </div>
             </div>
         `;
     }
@@ -1529,24 +1534,60 @@ function showBookDetail(book, source = 'list', editMode = false) {
         });
     });
 
-    // Add event listener for star rating
-    const starRating = content.querySelector('.star-rating');
-    if (starRating) {
-        starRating.querySelectorAll('.star').forEach(star => {
-            star.addEventListener('click', (e) => {
-                const rating = parseInt(e.target.dataset.rating);
-                updateBookRating(book.id, rating);
-                
-                // Update star display
-                starRating.querySelectorAll('.star').forEach(s => {
-                    const starValue = parseInt(s.dataset.rating);
-                    if (starValue <= rating) {
-                        s.classList.add('filled');
-                    } else {
-                        s.classList.remove('filled');
-                    }
-                });
-            });
+    // Add event listener for rating input
+    const ratingWrapper = content.querySelector('.rating-display-wrapper');
+    if (ratingWrapper) {
+        const ratingDisplay = ratingWrapper.querySelector('.rating-display');
+        const ratingInput = ratingWrapper.querySelector('.rating-input');
+        const bookId = ratingWrapper.dataset.bookId;
+
+        // Click on display to edit
+        ratingDisplay.addEventListener('click', () => {
+            const currentRating = getRatingFromTags(displayBook.tags);
+            ratingInput.value = currentRating || '';
+            ratingDisplay.style.display = 'none';
+            ratingInput.style.display = 'block';
+            ratingInput.focus();
+            ratingInput.select();
+        });
+
+        // Save rating function
+        const saveRating = () => {
+            const rating = parseInt(ratingInput.value);
+            if (ratingInput.value === '' || (rating >= 1 && rating <= 10)) {
+                // Update the book rating (empty value clears the rating)
+                updateBookRating(bookId, ratingInput.value === '' ? null : rating);
+
+                // Update display
+                const newRating = ratingInput.value === '' ? null : rating;
+                const newDisplay = newRating ? `⭐ ${newRating}/10` : '⭐ ?/10';
+                ratingDisplay.textContent = newDisplay;
+
+                // Update displayBook for consistency
+                const bookToUpdate = state.books.find(b => b.id === bookId);
+                if (bookToUpdate) {
+                    displayBook.tags = bookToUpdate.tags;
+                }
+            }
+
+            // Switch back to display mode
+            ratingInput.style.display = 'none';
+            ratingDisplay.style.display = 'block';
+        };
+
+        // Save on blur
+        ratingInput.addEventListener('blur', saveRating);
+
+        // Save on Enter key
+        ratingInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                ratingInput.blur(); // Trigger blur event which saves
+            } else if (e.key === 'Escape') {
+                // Cancel editing
+                ratingInput.style.display = 'none';
+                ratingDisplay.style.display = 'block';
+            }
         });
     }
 

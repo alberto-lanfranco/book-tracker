@@ -228,7 +228,11 @@ Body: {
   - **Tag suggestions**: Shows list of existing tags while typing
   - Remove tags by clicking × button
   - Tags displayed as pills with remove button
-- **Rating input** (10 tappable stars) - shown only for books with Read status (finishedAt is set)
+- **Rating input** (tap-to-edit number field) - shown only for books with Read status (finishedAt is set)
+  - Displays as "⭐ 5/10" format (or "⭐ ?/10" when unset), matching list view style
+  - Tap to convert to numerical input field (1-10)
+  - Save on blur or Enter key, cancel on Escape
+  - Supports clearing rating by leaving input empty
 - **From search**: Shows 3 list buttons with labels (To Read, Reading, Read) to add book
 - **From list**: Shows 3 list buttons (current highlighted) + delete button + edit button
 - Click outside or X button to close
@@ -609,7 +613,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.6.0
+- **Current Version**: 3.7.0
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -630,6 +634,8 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.7.0** (2026-01-02): UI Update: Redesigned rating input in full page book view. Replaced 10 tappable stars with tap-to-edit number field approach. Rating now displays as "⭐ 5/10" (or "⭐ ?/10" when unset) matching list view style. Tap the rating to convert it to a numerical input field (1-10). Saves on blur or Enter key, cancels on Escape. Supports clearing rating by leaving input empty.
+- **3.6.1** (2025-12-31): UX Update: Removed toast notification from cover migration for cleaner background process.
 - **3.6.0** (2025-12-31): Feature: All book covers are now cached for offline availability. Added convertImageToDataUri(), cacheBookCover(), and migrateExistingCovers() functions. Book covers are downloaded and stored as base64 data URIs in the cachedCover property when books are added. Existing book covers are migrated automatically on app load. Display logic updated to prefer cached covers over URLs for offline reliability. Only coverUrl is synced to cloud to keep TSV file size manageable.
 - **3.5.18** (2025-12-17): UX Update: Removed update notification popup. Updates are now applied automatically with a page reload when a new version is detected.
 - **3.5.17** (2025-12-16): UI Fix: Adjusted book detail modal to respect safe area insets (notch) in both portrait and landscape modes. Added padding to book metadata to prevent title from overlapping with the close button.

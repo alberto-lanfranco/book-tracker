@@ -1,5 +1,5 @@
 // App version (semantic versioning)
-const APP_VERSION = '3.7.0';
+const APP_VERSION = '3.7.1';
 console.log('Book Tracker app.js loaded, version:', APP_VERSION);
 
 // Helper functions for rating tags
@@ -532,22 +532,22 @@ function setupEventListeners() {
     // Detail modal button handler (delegated)
     const bookDetailContent = document.getElementById('bookDetailContent');
     if (bookDetailContent) {
-        bookDetailContent.addEventListener('click', (e) => {
+        bookDetailContent.addEventListener('click', async (e) => {
             // Handle Add Book Initial
             const addButton = e.target.closest('button[data-action="add-book-initial"]');
             if (addButton) {
                 if (!currentDetailBook) return;
-                
+
                 // Add to 'to_read' by default
-                addBookToList(currentDetailBook, 'to_read', true);
-                
+                await addBookToList(currentDetailBook, 'to_read', true);
+
                 // Re-render the modal to show the pill selector
                 // Find the book in state to ensure we have the latest data (ID, timestamps)
-                const addedBook = state.books.find(b => 
-                    b.isbn === currentDetailBook.isbn || 
+                const addedBook = state.books.find(b =>
+                    b.isbn === currentDetailBook.isbn ||
                     (currentDetailBook.id && b.id === currentDetailBook.id)
                 );
-                
+
                 if (addedBook) {
                     showBookDetail(addedBook, 'search');
                 }

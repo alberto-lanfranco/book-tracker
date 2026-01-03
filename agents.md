@@ -613,7 +613,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
 - **Version Format**: MAJOR.MINOR.PATCH (e.g., 1.1.0)
 - **Location**: `APP_VERSION` constant in `app.js` and `CACHE_VERSION` in `sw.js`
 - **Display**: Shown in Settings tab under "About" section
-- **Current Version**: 3.7.0
+- **Current Version**: 3.7.1
 - **When to Update**:
   - **MAJOR**: Breaking changes, major redesigns, incompatible data format changes
   - **MINOR**: New features, significant additions (e.g., new sync method, sorting, tags)
@@ -634,6 +634,7 @@ All icons: 18x18px in cards, 24x24px in navigation, stroke-width 2
   - Ensure consistency between code implementation and documentation
 
 ### Version History
+- **3.7.1** (2026-01-03): Bug Fix: Fixed regression where book detail modal wouldn't switch to tracked book view after tapping 'Add' button from search results. Made event handler async and properly awaited addBookToList() to ensure book is added to state before re-rendering modal.
 - **3.7.0** (2026-01-02): UI Update: Redesigned rating input in full page book view. Replaced 10 tappable stars with tap-to-edit number field approach. Rating now displays as "⭐ 5/10" (or "⭐ ?/10" when unset) matching list view style. Tap the rating to convert it to a numerical input field (1-10). Saves on blur or Enter key, cancels on Escape. Supports clearing rating by leaving input empty.
 - **3.6.1** (2025-12-31): UX Update: Removed toast notification from cover migration for cleaner background process.
 - **3.6.0** (2025-12-31): Feature: All book covers are now cached for offline availability. Added convertImageToDataUri(), cacheBookCover(), and migrateExistingCovers() functions. Book covers are downloaded and stored as base64 data URIs in the cachedCover property when books are added. Existing book covers are migrated automatically on app load. Display logic updated to prefer cached covers over URLs for offline reliability. Only coverUrl is synced to cloud to keep TSV file size manageable.
